@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>トリプルnバックトレーニング｜ワーキングメモリの脳トレ</title>
+    <meta name="description" content="位置・色・形を同時に覚えるトリプルnバックトレーニング。縦4×横4マス、n=1〜3対応。表示の速さや回数を自分で調整できる無料の脳トレです。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Zen+Old+Mincho:wght@700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #f4f6f5;
+        --surface: #ffffff;
+        --surface-2: #e9eeec;
+        --ink: #1c2422;
+        --ink-soft: #4c5a56;
+        --line: #d3dcd8;
+        --accent: #0e6b5c;
+        --accent-strong: #095244;
+        --accent-ink: #ffffff;
+        --warn: #b3402a;
+        --good: #0e6b5c;
+        --cell: #ffffff;
+        --cell-line: #cfd8d4;
+        --cell-active: #dcefe9;
+        --shadow: 0 1px 2px rgba(20, 40, 35, .06), 0 8px 24px rgba(20, 40, 35, .06);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #12181a;
+          --surface: #1b2326;
+          --surface-2: #242e31;
+          --ink: #e8efec;
+          --ink-soft: #a7b6b1;
+          --line: #33403f;
+          --accent: #2ea88f;
+          --accent-strong: #4cc3ab;
+          --accent-ink: #0b1512;
+          --warn: #e07a5f;
+          --good: #4cc3ab;
+          --cell: #1b2326;
+          --cell-line: #33403f;
+          --cell-active: #173b33;
+          --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      button, input { font: inherit; }
+      button { min-height: 44px; cursor: pointer; }
+
+      .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+
+      header.top { margin-bottom: 18px; }
+      header.top h1 {
+        font-family: "Zen Old Mincho", "Hiragino Mincho ProN", serif;
+        font-size: 28px; line-height: 1.3; margin: 0 0 6px; letter-spacing: .02em;
+      }
+      header.top p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+      .layout { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+      .col-side { display: grid; gap: 20px; }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+        padding: 18px;
+      }
+      .panel h2 { font-size: 17px; margin: 0 0 12px; font-weight: 900; }
+
+      /* ---- board ---- */
+      .status-row {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: 12px; margin-bottom: 12px; min-height: 28px;
+      }
+      .status-main { font-weight: 900; font-size: 18px; }
+      .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; }
+      .board {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+        width: 100%; max-width: 400px; margin: 0 auto;
+      }
+      .cell {
+        aspect-ratio: 1 / 1;
+        background: var(--cell);
+        border: 1.5px solid var(--cell-line);
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .cell.active { background: var(--cell-active); border-color: var(--accent); }
+      .cell svg { width: 72%; height: 72%; display: block; }
+
+      .progress-track { height: 6px; background: var(--surface-2); border-radius: 3px; margin: 16px 0 4px; overflow: hidden; }
+      .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; transition: width .2s linear; }
+
+      /* ---- answer buttons ---- */
+      .answers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+      .ans-btn {
+        border: 2px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        border-radius: 10px;
+        padding: 12px 6px 10px;
+        min-height: 76px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        transition: background .08s, border-color .08s, transform .05s;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .ans-btn .ans-name { font-size: 21px; font-weight: 900; line-height: 1.2; }
+      .ans-btn .ans-key { font-size: 12px; color: var(--ink-soft); }
+      .ans-btn:disabled { opacity: .45; cursor: default; }
+      .ans-btn.pressed {
+        background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink);
+      }
+      .ans-btn.pressed .ans-key { color: var(--accent-ink); opacity: .85; }
+      .ans-btn:not(:disabled):active { transform: scale(.97); }
+
+      .main-actions { display: grid; gap: 10px; margin-top: 16px; }
+      .btn-start {
+        background: var(--accent); color: var(--accent-ink);
+        border: none; border-radius: 10px;
+        font-size: 19px; font-weight: 900; padding: 14px;
+        min-height: 56px; width: 100%;
+      }
+      .btn-start:active { background: var(--accent-strong); }
+      .btn-stop {
+        background: var(--surface); color: var(--warn);
+        border: 1.5px solid var(--warn); border-radius: 10px;
+        font-size: 16px; font-weight: 700; padding: 10px; width: 100%;
+      }
+      [hidden] { display: none !important; }
+
+      /* ---- settings ---- */
+      .n-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+      .n-row .n-label { font-weight: 700; }
+      .n-seg { display: flex; gap: 8px; }
+      .n-seg button {
+        width: 56px; min-height: 48px; font-size: 18px; font-weight: 900;
+        border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+        border-radius: 8px;
+      }
+      .n-seg button.selected { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
+      .n-note { color: var(--ink-soft); font-size: 13px; }
+
+      .slider-block { margin-bottom: 18px; }
+      .slider-block:last-child { margin-bottom: 4px; }
+      .slider-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+      .slider-head label { font-weight: 700; }
+      .slider-val { font-weight: 900; font-size: 17px; font-variant-numeric: tabular-nums; }
+      .slider-val .unit { font-size: 13px; font-weight: 500; color: var(--ink-soft); margin-left: 2px; }
+      input[type="range"] {
+        width: 100%; min-height: 44px; accent-color: var(--accent); margin: 0;
+      }
+      .slider-scale { display: flex; justify-content: space-between; color: var(--ink-soft); font-size: 12px; margin-top: -6px; }
+      .settings-note { color: var(--ink-soft); font-size: 13px; margin: 10px 0 0; }
+      fieldset { border: none; margin: 0; padding: 0; }
+      fieldset:disabled { opacity: .55; }
+
+      /* ---- results & record ---- */
+      .acc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+      .acc-box { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; }
+      .acc-box .acc-name { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+      .acc-box .acc-num { font-size: 34px; font-weight: 900; line-height: 1.15; font-variant-numeric: tabular-nums; }
+      .acc-box .acc-num .pct { font-size: 18px; }
+      .acc-box.overall { grid-column: 1 / -1; background: var(--accent); color: var(--accent-ink); }
+      .acc-box.overall .acc-name { color: var(--accent-ink); opacity: .85; }
+      .acc-box.overall .acc-num { font-size: 42px; }
+
+      .detail-list { display: grid; gap: 8px; }
+      .detail-row {
+        display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+        border-top: 1px solid var(--line); padding-top: 8px; font-size: 15px;
+      }
+      .detail-row .d-name { font-weight: 900; }
+      .detail-row .d-nums { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+      .detail-row .d-nums b { color: var(--ink); }
+
+      .history-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+      .history-list li {
+        display: flex; justify-content: space-between; gap: 10px;
+        padding: 9px 0; border-top: 1px solid var(--line); font-size: 15px;
+        font-variant-numeric: tabular-nums;
+      }
+      .history-list li:first-child { border-top: none; padding-top: 2px; }
+      .history-list .h-when { color: var(--ink-soft); }
+      .empty-note { color: var(--ink-soft); font-size: 14px; margin: 0; }
+
+      .howto { font-size: 14.5px; color: var(--ink-soft); }
+      .howto p { margin: 0 0 8px; }
+      .howto p:last-child { margin-bottom: 0; }
+      .howto b { color: var(--ink); }
+
+      /* ---- tablet ---- */
+      @media (min-width: 768px) {
+        .wrap { max-width: 1060px; padding: 28px 24px 56px; }
+        header.top h1 { font-size: 34px; }
+        .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+        .board { max-width: 480px; }
+        .acc-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      /* ---- PC ---- */
+      @media (min-width: 1025px) {
+        .wrap { max-width: 1180px; }
+        .layout { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+        .board { max-width: 520px; }
+        .ans-btn { min-height: 88px; }
+        .ans-btn .ans-name { font-size: 24px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .progress-fill { transition: none; }
+        .ans-btn { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <h1>nバックトレーニング</h1>
+        <p>位置・色・形の3つを同時に覚える、トリプルnバックです。</p>
+      </header>
+
+      <div class="layout">
+        <!-- game column -->
+        <section class="panel" aria-label="トレーニング">
+          <div class="status-row">
+            <span class="status-main" id="statusMain">準備ができました</span>
+            <span class="status-sub" id="statusSub"></span>
+          </div>
+
+          <div class="board" id="board" aria-label="4かける4の盤面"></div>
+
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+          <div class="answers">
+            <button type="button" class="ans-btn" id="btnPos" disabled>
+              <span class="ans-name">位置</span><span class="ans-key">Aキー</span>
+            </button>
+            <button type="button" class="ans-btn" id="btnCol" disabled>
+              <span class="ans-name">色</span><span class="ans-key">Sキー</span>
+            </button>
+            <button type="button" class="ans-btn" id="btnShp" disabled>
+              <span class="ans-name">形</span><span class="ans-key">Dキー</span>
+            </button>
+          </div>
+
+          <div class="main-actions">
+            <button type="button" class="btn-start" id="btnStart">スタート</button>
+            <button type="button" class="btn-stop" id="btnStop" hidden>やめる</button>
+          </div>
+        </section>
+
+        <!-- side column -->
+        <div class="col-side">
+          <section class="panel" aria-label="設定">
+            <h2>設定</h2>
+            <fieldset id="settingsFieldset">
+              <div class="n-row">
+                <span class="n-label" id="nLabel">むずかしさ（n）</span>
+                <div class="n-seg" role="group" aria-labelledby="nLabel">
+                  <button type="button" data-n="1">1</button>
+                  <button type="button" data-n="2" class="selected">2</button>
+                  <button type="button" data-n="3">3</button>
+                </div>
+                <span class="n-note">「2つ前」と比べます</span>
+              </div>
+
+              <div class="slider-block">
+                <div class="slider-head">
+                  <label for="rngShow">表示時間</label>
+                  <span class="slider-val"><span id="valShow">2500</span><span class="unit">ミリ秒</span></span>
+                </div>
+                <input type="range" id="rngShow" min="500" max="3000" step="100" value="2500" />
+                <div class="slider-scale"><span>500</span><span>3000</span></div>
+              </div>
+
+              <div class="slider-block">
+                <div class="slider-head">
+                  <label for="rngGap">間隔</label>
+                  <span class="slider-val"><span id="valGap">500</span><span class="unit">ミリ秒</span></span>
+                </div>
+                <input type="range" id="rngGap" min="0" max="3000" step="100" value="500" />
+                <div class="slider-scale"><span>0</span><span>3000</span></div>
+              </div>
+
+              <div class="slider-block">
+                <div class="slider-head">
+                  <label for="rngTrials">表示回数</label>
+                  <span class="slider-val"><span id="valTrials">23</span><span class="unit">回</span></span>
+                </div>
+                <input type="range" id="rngTrials" min="10" max="60" step="1" value="23" />
+                <div class="slider-scale"><span>10回</span><span>60回</span></div>
+              </div>
+
+              <div class="slider-block">
+                <div class="slider-head">
+                  <label for="rngMatch">一致回数</label>
+                  <span class="slider-val"><span id="valMatch">6</span><span class="unit">回</span></span>
+                </div>
+                <input type="range" id="rngMatch" min="1" max="10" step="1" value="6" />
+                <div class="slider-scale"><span>1回</span><span>10回</span></div>
+              </div>
+
+              <p class="settings-note">一致回数は、位置・色・形のそれぞれで、採点される回の中にちょうどその回数だけ「n個前と一致」が出る設定です。一致する場所は毎回ランダムに散らばります。</p>
+            </fieldset>
+          </section>
+
+          <section class="panel" id="resultPanel" hidden aria-label="結果">
+            <h2>今回の結果</h2>
+            <div class="acc-grid">
+              <div class="acc-box overall">
+                <div class="acc-name">全体の正解率</div>
+                <div class="acc-num"><span id="resAll">–</span><span class="pct">%</span></div>
+              </div>
+              <div class="acc-box">
+                <div class="acc-name">位置</div>
+                <div class="acc-num"><span id="resPos">–</span><span class="pct">%</span></div>
+              </div>
+              <div class="acc-box">
+                <div class="acc-name">色</div>
+                <div class="acc-num"><span id="resCol">–</span><span class="pct">%</span></div>
+              </div>
+              <div class="acc-box">
+                <div class="acc-name">形</div>
+                <div class="acc-num"><span id="resShp">–</span><span class="pct">%</span></div>
+              </div>
+            </div>
+            <div class="detail-list" id="resultDetails"></div>
+          </section>
+
+          <section class="panel" aria-label="記録">
+            <h2>記録（このページを開いている間）</h2>
+            <div class="acc-grid">
+              <div class="acc-box overall">
+                <div class="acc-name">全体の正解率（通算）</div>
+                <div class="acc-num"><span id="totAll">–</span><span class="pct">%</span></div>
+              </div>
+              <div class="acc-box">
+                <div class="acc-name">位置</div>
+                <div class="acc-num"><span id="totPos">–</span><span class="pct">%</span></div>
+              </div>
+              <div class="acc-box">
+                <div class="acc-name">色</div>
+                <div class="acc-num"><span id="totCol">–</span><span class="pct">%</span></div>
+              </div>
+              <div class="acc-box">
+                <div class="acc-name">形</div>
+                <div class="acc-num"><span id="totShp">–</span><span class="pct">%</span></div>
+              </div>
+            </div>
+            <p class="empty-note" id="historyEmpty">まだ記録がありません。1回遊ぶと、ここに通算の正解率と履歴が出ます。</p>
+            <ul class="history-list" id="historyList"></ul>
+          </section>
+
+          <section class="panel howto" aria-label="遊び方">
+            <h2 style="color:var(--ink)">遊び方</h2>
+            <p>盤面に図形が1つずつ表示されます。<b>n個前</b>の図形と比べて、<b>位置</b>が同じなら「位置」、<b>色</b>が同じなら「色」、<b>形</b>が同じなら「形」のボタンを押してください。複数の条件が同時に当てはまることもあります。</p>
+            <p>最初のn回は比べる相手がないので、採点されません。パソコンではキーボードの <b>A（位置）・S（色）・D（形）</b> でも答えられます。</p>
+            <p>色は あか・きいろ・みどり・みずいろ・あお・むらさき の6色、形は まる・しかく・さんかく・ひしがた・ほし・ろっかく の6種類です。</p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        /* ---------- constants ---------- */
+        var COLOR_NAMES = ["あか", "きいろ", "みどり", "みずいろ", "あお", "むらさき"];
+        var SHAPE_NAMES = ["まる", "しかく", "さんかく", "ひしがた", "ほし", "ろっかく"];
+        var MODS = [
+          { key: "pos", name: "位置" },
+          { key: "col", name: "色" },
+          { key: "shp", name: "形" }
+        ];
+
+        function shapeSVG(shapeIdx, colorIdx) {
+          var fill = "hsl(" + colorIdx * 60 + ", 82%, 52%)";
+          var inner;
+          switch (shapeIdx) {
+            case 0: inner = '<circle cx="50" cy="50" r="37"/>'; break;
+            case 1: inner = '<rect x="15" y="15" width="70" height="70" rx="5"/>'; break;
+            case 2: inner = '<polygon points="50,13 88,84 12,84"/>'; break;
+            case 3: inner = '<polygon points="50,7 90,50 50,93 10,50"/>'; break;
+            case 4: inner = '<polygon points="50,5 62,37 96,37 68,58 79,93 50,71 21,93 32,58 4,37 38,37"/>'; break;
+            default: inner = '<polygon points="50,6 88,28 88,72 50,94 12,72 12,28"/>'; break;
+          }
+          return '<svg viewBox="0 0 100 100" aria-hidden="true"><g fill="' + fill + '">' + inner + "</g></svg>";
+        }
+
+        /* ---------- dom ---------- */
+        var boardEl = document.getElementById("board");
+        var cells = [];
+        for (var i = 0; i < 16; i++) {
+          var d = document.createElement("div");
+          d.className = "cell";
+          boardEl.appendChild(d);
+          cells.push(d);
+        }
+        var statusMain = document.getElementById("statusMain");
+        var statusSub = document.getElementById("statusSub");
+        var progressFill = document.getElementById("progressFill");
+        var btnStart = document.getElementById("btnStart");
+        var btnStop = document.getElementById("btnStop");
+        var fieldset = document.getElementById("settingsFieldset");
+        var ansBtns = {
+          pos: document.getElementById("btnPos"),
+          col: document.getElementById("btnCol"),
+          shp: document.getElementById("btnShp")
+        };
+
+        var sliders = {
+          show: document.getElementById("rngShow"),
+          gap: document.getElementById("rngGap"),
+          trials: document.getElementById("rngTrials"),
+          match: document.getElementById("rngMatch")
+        };
+        var sliderVals = {
+          show: document.getElementById("valShow"),
+          gap: document.getElementById("valGap"),
+          trials: document.getElementById("valTrials"),
+          match: document.getElementById("valMatch")
+        };
+        Object.keys(sliders).forEach(function (k) {
+          sliders[k].addEventListener("input", function () {
+            sliderVals[k].textContent = sliders[k].value;
+          });
+        });
+
+        var currentN = 2;
+        var nBtns = document.querySelectorAll(".n-seg button");
+        nBtns.forEach(function (b) {
+          b.addEventListener("click", function () {
+            currentN = parseInt(b.getAttribute("data-n"), 10);
+            nBtns.forEach(function (x) { x.classList.toggle("selected", x === b); });
+          });
+        });
+
+        /* ---------- sequence generation ----------
+           For each modality independently: pick exactly `matchCount` of the
+           scored positions (index >= n) at random to be matches; every other
+           scored position is guaranteed NOT to match n-back. */
+        function shuffle(arr) {
+          for (var i = arr.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+          }
+          return arr;
+        }
+        function genModality(total, n, matchCount, valueCount) {
+          var scoredIdx = [];
+          for (var i = n; i < total; i++) scoredIdx.push(i);
+          shuffle(scoredIdx);
+          var matchSet = {};
+          scoredIdx.slice(0, matchCount).forEach(function (idx) { matchSet[idx] = true; });
+          var seq = new Array(total);
+          for (var k = 0; k < total; k++) {
+            if (k >= n && matchSet[k]) {
+              seq[k] = seq[k - n];
+            } else {
+              var v;
+              do { v = Math.floor(Math.random() * valueCount); }
+              while (k >= n && v === seq[k - n]);
+              seq[k] = v;
+            }
+          }
+          return { seq: seq, matchSet: matchSet };
+        }
+
+        /* ---------- game state ---------- */
+        var playing = false;
+        var timers = [];
+        var game = null; // {n, total, seqs, idx, pressed, stats}
+
+        function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+        function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+        function newStats() {
+          var s = {};
+          MODS.forEach(function (m) { s[m.key] = { hit: 0, miss: 0, fa: 0, cr: 0 }; });
+          return s;
+        }
+
+        function setAnswersEnabled(on) {
+          MODS.forEach(function (m) { ansBtns[m.key].disabled = !on; });
+        }
+        function clearPressed() {
+          MODS.forEach(function (m) { ansBtns[m.key].classList.remove("pressed"); });
+        }
+        function clearBoard() {
+          cells.forEach(function (c) { c.classList.remove("active"); c.innerHTML = ""; });
+        }
+
+        function press(key) {
+          if (!playing || !game || game.idx < 0 || game.idx >= game.total) return;
+          if (game.pressed[key]) return;
+          game.pressed[key] = true;
+          ansBtns[key].classList.add("pressed");
+        }
+        MODS.forEach(function (m) {
+          ansBtns[m.key].addEventListener("click", function () { press(m.key); });
+        });
+        document.addEventListener("keydown", function (e) {
+          if (!playing || e.repeat) return;
+          var k = e.key.toLowerCase();
+          if (k === "a") press("pos");
+          else if (k === "s") press("col");
+          else if (k === "d") press("shp");
+        });
+
+        function evaluateCurrent() {
+          var g = game, i = g.idx;
+          if (i < g.n) return; // first n trials are not scored
+          MODS.forEach(function (m) {
+            var isMatch = !!g.seqs[m.key].matchSet[i];
+            var pressed = !!g.pressed[m.key];
+            var st = g.stats[m.key];
+            if (isMatch && pressed) st.hit++;
+            else if (isMatch && !pressed) st.miss++;
+            else if (!isMatch && pressed) st.fa++;
+            else st.cr++;
+          });
+        }
+
+        function showTrial() {
+          var g = game, i = g.idx;
+          g.pressed = { pos: false, col: false, shp: false };
+          clearPressed();
+          clearBoard();
+          var pos = g.seqs.pos.seq[i];
+          cells[pos].classList.add("active");
+          cells[pos].innerHTML = shapeSVG(g.seqs.shp.seq[i], g.seqs.col.seq[i]);
+          statusMain.textContent = (i + 1) + "回目を表示中";
+          statusSub.textContent = "n = " + g.n + " ／ 全" + g.total + "回";
+          progressFill.style.width = ((i + 1) / g.total * 100) + "%";
+        }
+
+        function runTrial() {
+          var g = game;
+          showTrial();
+          later(function () {
+            clearBoard(); // hide stimulus; answers still accepted during the gap
+            statusMain.textContent = (g.idx + 1) + "回目";
+            later(function () {
+              evaluateCurrent();
+              g.idx++;
+              if (g.idx >= g.total) finishGame();
+              else runTrial();
+            }, g.gapMs);
+          }, g.showMs);
+        }
+
+        function startGame() {
+          var total = parseInt(sliders.trials.value, 10);
+          var showMs = parseInt(sliders.show.value, 10);
+          var gapMs = parseInt(sliders.gap.value, 10);
+          var wantMatch = parseInt(sliders.match.value, 10);
+          var scored = total - currentN;
+          var matchCount = Math.min(wantMatch, scored);
+          game = {
+            n: currentN, total: total, showMs: showMs, gapMs: gapMs,
+            idx: 0, pressed: { pos: false, col: false, shp: false },
+            stats: newStats(),
+            seqs: {
+              pos: genModality(total, currentN, matchCount, 16),
+              col: genModality(total, currentN, matchCount, 6),
+              shp: genModality(total, currentN, matchCount, 6)
+            }
+          };
+          playing = true;
+          document.getElementById("resultPanel").hidden = true;
+          fieldset.disabled = true;
+          btnStart.hidden = true;
+          btnStop.hidden = false;
+          setAnswersEnabled(true);
+          statusMain.textContent = "まもなく始まります";
+          statusSub.textContent = "n = " + currentN + " ／ 全" + total + "回";
+          progressFill.style.width = "0%";
+          later(runTrial, 900);
+        }
+
+        function endPlay() {
+          playing = false;
+          clearTimers();
+          clearBoard();
+          clearPressed();
+          setAnswersEnabled(false);
+          fieldset.disabled = false;
+          btnStart.hidden = false;
+          btnStop.hidden = true;
+        }
+
+        function stopGame() {
+          endPlay();
+          statusMain.textContent = "途中でやめました";
+          statusSub.textContent = "";
+          progressFill.style.width = "0%";
+        }
+
+        /* ---------- results & session record ---------- */
+        var sessionGames = []; // in-memory only
+
+        function accOf(st) {
+          var total = st.hit + st.miss + st.fa + st.cr;
+          if (!total) return null;
+          return Math.round((st.hit + st.cr) / total * 100);
+        }
+        function combinedStats(games) {
+          var s = newStats();
+          games.forEach(function (g) {
+            MODS.forEach(function (m) {
+              ["hit", "miss", "fa", "cr"].forEach(function (f) { s[m.key][f] += g.stats[m.key][f]; });
+            });
+          });
+          return s;
+        }
+        function overallAcc(stats) {
+          var agg = { hit: 0, miss: 0, fa: 0, cr: 0 };
+          MODS.forEach(function (m) {
+            ["hit", "miss", "fa", "cr"].forEach(function (f) { agg[f] += stats[m.key][f]; });
+          });
+          return accOf(agg);
+        }
+        function fmt(v) { return v === null ? "–" : String(v); }
+
+        function finishGame() {
+          var finished = game;
+          endPlay();
+          statusMain.textContent = "おつかれさまでした";
+          statusSub.textContent = "";
+          progressFill.style.width = "100%";
+
+          sessionGames.push({ n: finished.n, total: finished.total, stats: finished.stats, at: new Date() });
+          renderResults(finished.stats);
+          renderRecord();
+        }
+
+        function renderResults(stats) {
+          document.getElementById("resAll").textContent = fmt(overallAcc(stats));
+          document.getElementById("resPos").textContent = fmt(accOf(stats.pos));
+          document.getElementById("resCol").textContent = fmt(accOf(stats.col));
+          document.getElementById("resShp").textContent = fmt(accOf(stats.shp));
+          var wrap = document.getElementById("resultDetails");
+          wrap.innerHTML = "";
+          MODS.forEach(function (m) {
+            var st = stats[m.key];
+            var row = document.createElement("div");
+            row.className = "detail-row";
+            row.innerHTML = '<span class="d-name"></span><span class="d-nums"></span>';
+            row.querySelector(".d-name").textContent = m.name;
+            row.querySelector(".d-nums").innerHTML =
+              "正解 <b>" + st.hit + "</b>　見逃し <b>" + st.miss + "</b>　押し間違い <b>" + st.fa + "</b>";
+            wrap.appendChild(row);
+          });
+          document.getElementById("resultPanel").hidden = false;
+        }
+
+        function renderRecord() {
+          var stats = combinedStats(sessionGames);
+          document.getElementById("totAll").textContent = fmt(overallAcc(stats));
+          document.getElementById("totPos").textContent = fmt(accOf(stats.pos));
+          document.getElementById("totCol").textContent = fmt(accOf(stats.col));
+          document.getElementById("totShp").textContent = fmt(accOf(stats.shp));
+          document.getElementById("historyEmpty").hidden = sessionGames.length > 0;
+          var list = document.getElementById("historyList");
+          list.innerHTML = "";
+          sessionGames.slice().reverse().forEach(function (g, revIdx) {
+            var li = document.createElement("li");
+            var left = document.createElement("span");
+            var hh = ("0" + g.at.getHours()).slice(-2);
+            var mm = ("0" + g.at.getMinutes()).slice(-2);
+            left.innerHTML = '<span class="h-when">' + hh + ":" + mm + "</span>　" +
+              (sessionGames.length - revIdx) + "回目： n=" + g.n + "、" + g.total + "回表示";
+            var right = document.createElement("span");
+            right.innerHTML = "全体 <b>" + fmt(overallAcc(g.stats)) + "%</b>";
+            li.appendChild(left); li.appendChild(right);
+            list.appendChild(li);
+          });
+        }
+
+        btnStart.addEventListener("click", startGame);
+        btnStop.addEventListener("click", stopGame);
+      })();
+    </script>
+  </body>
+</html>
