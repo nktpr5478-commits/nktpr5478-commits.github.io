@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="data:," />
-    <meta name="description" content="位置・色・形の3つを同時に覚えるトリプルnバックトレーニング。ワーキングメモリを鍛える脳トレが、ブラウザでそのまま無料で遊べます。n=1〜3対応、盤面は2×2〜5×5から選べます。正解率の記録つき。" />
+    <meta name="description" content="位置・色・形から比べる種類を自由に選べるnバックトレーニング。ワーキングメモリを鍛える脳トレが、ブラウザでそのまま無料で遊べます。n=1〜3対応、盤面は2×2〜5×5から選べます。正解率の記録つき。" />
     <title>トリプルnバックトレーニング｜ワーキングメモリの脳トレ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -171,6 +171,18 @@
       }
       .n-seg button.selected { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
       .n-note { color: var(--ink-soft); font-size: 13px; }
+      .mod-row { margin-bottom: 18px; }
+      .mod-row .mod-label { font-weight: 700; display: block; margin-bottom: 8px; }
+      .mod-seg { display: flex; gap: 8px; flex-wrap: wrap; }
+      .mod-seg button {
+        min-width: 92px; min-height: 52px; padding: 8px 14px; font-size: 18px; font-weight: 900;
+        border: 2px solid var(--line); background: var(--surface); color: var(--ink-soft);
+        border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      }
+      .mod-seg button .mod-check { font-size: 15px; line-height: 1; width: 18px; height: 18px; border: 2px solid currentColor; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+      .mod-seg button.selected { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
+      .mod-note { color: var(--ink-soft); font-size: 13px; margin-top: 8px; }
+      .mod-warn { color: var(--warn); font-size: 13px; font-weight: 700; margin-top: 6px; min-height: 20px; }
 
       .slider-block { margin-bottom: 18px; }
       .slider-block:last-child { margin-bottom: 4px; }
@@ -262,7 +274,7 @@
     <div class="wrap">
       <header class="top">
         <h1>nバックトレーニング</h1>
-        <p>位置・色・形の3つを同時に覚える、トリプルnバックです。</p>
+        <p id="headerSub">位置・色・形の3つを同時に覚える、トリプルnバックです。</p>
       </header>
 
       <div class="layout">
@@ -277,14 +289,14 @@
 
           <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
 
-          <div class="answers">
-            <button type="button" class="ans-btn" id="btnPos" disabled>
+          <div class="answers" id="answersRow">
+            <button type="button" class="ans-btn" id="btnPos" data-mod="pos" disabled>
               <span class="ans-name">位置</span><span class="ans-key">Aキー</span>
             </button>
-            <button type="button" class="ans-btn" id="btnCol" disabled>
+            <button type="button" class="ans-btn" id="btnCol" data-mod="col" disabled>
               <span class="ans-name">色</span><span class="ans-key">Sキー</span>
             </button>
-            <button type="button" class="ans-btn" id="btnShp" disabled>
+            <button type="button" class="ans-btn" id="btnShp" data-mod="shp" disabled>
               <span class="ans-name">形</span><span class="ans-key">Dキー</span>
             </button>
           </div>
@@ -305,6 +317,16 @@
             </button>
             <div class="settings-body" id="settingsBody" hidden>
             <fieldset id="settingsFieldset">
+              <div class="mod-row">
+                <span class="mod-label" id="modLabel">比べる種類（1つ以上選んでください）</span>
+                <div class="mod-seg" role="group" aria-labelledby="modLabel">
+                  <button type="button" data-mod-toggle="pos" class="selected" aria-pressed="true"><span class="mod-check" aria-hidden="true">✓</span>位置</button>
+                  <button type="button" data-mod-toggle="col" class="selected" aria-pressed="true"><span class="mod-check" aria-hidden="true">✓</span>色</button>
+                  <button type="button" data-mod-toggle="shp" class="selected" aria-pressed="true"><span class="mod-check" aria-hidden="true">✓</span>形</button>
+                </div>
+                <div class="mod-note">選んだ種類だけが出題・判定の対象になります。たとえば「位置だけ」「色と形」など自由に組み合わせられます。</div>
+                <div class="mod-warn" id="modWarn" aria-live="polite"></div>
+              </div>
               <div class="n-row">
                 <span class="n-label" id="nLabel">むずかしさ（n）</span>
                 <div class="n-seg" role="group" aria-labelledby="nLabel">
@@ -360,27 +382,27 @@
                 <div class="slider-scale"><span>1回</span><span>10回</span></div>
               </div>
 
-              <p class="settings-note">一致回数は、位置・色・形のそれぞれで、採点される回の中にちょうどその回数だけ「n個前と一致」が出る設定です。一致する場所は毎回ランダムに散らばります。</p>
+              <p class="settings-note">一致回数は、選んだ種類のそれぞれで、採点される回の中にちょうどその回数だけ「n個前と一致」が出る設定です。一致する場所は毎回ランダムに散らばります。</p>
             </fieldset>
             </div>
           </section>
 
           <section class="panel" id="resultPanel" hidden aria-label="結果">
             <h2>今回の結果</h2>
-            <div class="acc-grid">
+            <div class="acc-grid" id="resGrid">
               <div class="acc-box overall">
                 <div class="acc-name">全体の正解率</div>
                 <div class="acc-num"><span id="resAll">–</span><span class="pct">%</span></div>
               </div>
-              <div class="acc-box">
+              <div class="acc-box" data-res-mod="pos">
                 <div class="acc-name">位置</div>
                 <div class="acc-num"><span id="resPos">–</span><span class="pct">%</span></div>
               </div>
-              <div class="acc-box">
+              <div class="acc-box" data-res-mod="col">
                 <div class="acc-name">色</div>
                 <div class="acc-num"><span id="resCol">–</span><span class="pct">%</span></div>
               </div>
-              <div class="acc-box">
+              <div class="acc-box" data-res-mod="shp">
                 <div class="acc-name">形</div>
                 <div class="acc-num"><span id="resShp">–</span><span class="pct">%</span></div>
               </div>
@@ -391,20 +413,20 @@
           <section class="panel" aria-label="記録">
             <h2>記録</h2>
             <p class="storage-note">記録と設定はこの端末の中にだけ保存されます。外部のサーバーには送られません。別の端末や別のブラウザでは表示されません。</p>
-            <div class="acc-grid">
+            <div class="acc-grid" id="totGrid">
               <div class="acc-box overall">
                 <div class="acc-name">全体の正解率（通算）</div>
                 <div class="acc-num"><span id="totAll">–</span><span class="pct">%</span></div>
               </div>
-              <div class="acc-box">
+              <div class="acc-box" data-tot-mod="pos">
                 <div class="acc-name">位置</div>
                 <div class="acc-num"><span id="totPos">–</span><span class="pct">%</span></div>
               </div>
-              <div class="acc-box">
+              <div class="acc-box" data-tot-mod="col">
                 <div class="acc-name">色</div>
                 <div class="acc-num"><span id="totCol">–</span><span class="pct">%</span></div>
               </div>
-              <div class="acc-box">
+              <div class="acc-box" data-tot-mod="shp">
                 <div class="acc-name">形</div>
                 <div class="acc-num"><span id="totShp">–</span><span class="pct">%</span></div>
               </div>
@@ -418,8 +440,8 @@
 
           <section class="panel howto" aria-label="遊び方">
             <h2 style="color:var(--ink)">遊び方</h2>
-            <p>盤面に図形が1つずつ表示されます。<b>n個前</b>の図形と比べて、<b>位置</b>が同じなら「位置」、<b>色</b>が同じなら「色」、<b>形</b>が同じなら「形」のボタンを押してください。複数の条件が同時に当てはまることもあります。</p>
-            <p>最初のn回は比べる相手がないので、採点されません。パソコンではキーボードの <b>A（位置）・S（色）・D（形）</b> でも答えられます。</p>
+            <p>盤面に図形が1つずつ表示されます。<b>n個前</b>の図形と比べて、設定で選んだ種類が同じなら、そのボタンを押してください。たとえば位置だけを選べば位置だけ、色と形を選べばその2つだけを比べます。複数の条件が同時に当てはまることもあります。</p>
+            <p>最初のn回は比べる相手がないので、採点されません。パソコンではキーボードの <b>A（位置）・S（色）・D（形）</b> でも答えられます（選んだ種類だけ有効です）。</p>
             <p>色は あか・きいろ・みどり・みずいろ・あお・むらさき の6色、形は まる・しかく・さんかく・ひしがた・ほし・ろっかく の6種類です。盤面の大きさは設定で 2×2・3×3・4×4・5×5 から選べます。</p>
           </section>
         </div>
@@ -438,6 +460,28 @@
           { key: "col", name: "色" },
           { key: "shp", name: "形" }
         ];
+        var ALL_MOD_KEYS = ["pos", "col", "shp"];
+        var currentMods = { pos: true, col: true, shp: true };
+        function activeModKeys() {
+          return ALL_MOD_KEYS.filter(function (k) { return !!currentMods[k]; });
+        }
+        function gameMods(g) {
+          if (g && Array.isArray(g.mods) && g.mods.length) {
+            var filtered = g.mods.filter(function (k) { return ALL_MOD_KEYS.indexOf(k) >= 0; });
+            if (filtered.length) return filtered;
+          }
+          if (g && g.mods && typeof g.mods === "object") {
+            var fromObj = ALL_MOD_KEYS.filter(function (k) { return !!g.mods[k]; });
+            if (fromObj.length) return fromObj;
+          }
+          return ALL_MOD_KEYS.slice();
+        }
+        function modNames(keys) {
+          return keys.map(function (k) {
+            var found = MODS.filter(function (m) { return m.key === k; })[0];
+            return found ? found.name : k;
+          }).join("・");
+        }
 
         /* ---------- on-device storage (localStorage) ----------
            Records and settings live only in this browser on this device.
@@ -466,13 +510,14 @@
               settings: {
                 n: currentN,
                 grid: currentGrid,
+                mods: activeModKeys(),
                 show: sliders.show.value,
                 gap: sliders.gap.value,
                 trials: sliders.trials.value,
                 match: sliders.match.value
               },
               games: sessionGames.map(function (g) {
-                return { n: g.n, grid: g.grid, total: g.total, at: g.at.getTime(), stats: g.stats };
+                return { n: g.n, grid: g.grid, mods: gameMods(g), total: g.total, at: g.at.getTime(), stats: g.stats };
               })
             }));
           } catch (e) { /* storage full or blocked: keep playing in-memory */ }
@@ -534,6 +579,44 @@
           col: document.getElementById("btnCol"),
           shp: document.getElementById("btnShp")
         };
+        var answersRow = document.getElementById("answersRow");
+        var headerSub = document.getElementById("headerSub");
+        var modWarn = document.getElementById("modWarn");
+        var modToggleBtns = document.querySelectorAll("[data-mod-toggle]");
+        function applyModsUI() {
+          var active = activeModKeys();
+          modToggleBtns.forEach(function (b) {
+            var k = b.getAttribute("data-mod-toggle");
+            var on = !!currentMods[k];
+            b.classList.toggle("selected", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+            var chk = b.querySelector(".mod-check");
+            if (chk) chk.textContent = on ? "✓" : "";
+          });
+          MODS.forEach(function (m) {
+            if (ansBtns[m.key]) ansBtns[m.key].hidden = !currentMods[m.key];
+          });
+          if (answersRow) answersRow.style.gridTemplateColumns = "repeat(" + Math.max(1, active.length) + ", 1fr)";
+          if (headerSub) {
+            if (active.length === 3) headerSub.textContent = "位置・色・形の3つを同時に覚える、トリプルnバックです。";
+            else if (active.length === 2) headerSub.textContent = modNames(active) + "の2つを同時に覚える、ダブルnバックです。";
+            else headerSub.textContent = modNames(active) + "だけを覚える、シングルnバックです。";
+          }
+          if (typeof renderRecord === "function") { try { renderRecord(); } catch (e) {} }
+        }
+        modToggleBtns.forEach(function (b) {
+          b.addEventListener("click", function () {
+            var k = b.getAttribute("data-mod-toggle");
+            if (currentMods[k] && activeModKeys().length <= 1) {
+              if (modWarn) modWarn.textContent = "1つは選んだままにしてください。全部は外せません。";
+              return;
+            }
+            currentMods[k] = !currentMods[k];
+            if (modWarn) modWarn.textContent = "";
+            applyModsUI();
+            saveStore();
+          });
+        });
 
         var sliders = {
           show: document.getElementById("rngShow"),
@@ -604,7 +687,15 @@
             updateGridLabel();
             buildBoard(currentGrid);
           }
+          if (st.mods) {
+            var restored = gameMods({ mods: st.mods });
+            if (restored && restored.length) {
+              currentMods = { pos: false, col: false, shp: false };
+              restored.forEach(function (k) { currentMods[k] = true; });
+            }
+          }
         }
+        applyModsUI();
 
         /* ---------- sequence generation ----------
            For each modality independently: pick exactly `matchCount` of the
@@ -636,6 +727,11 @@
           }
           return { seq: seq, matchSet: matchSet };
         }
+        function genRandomSeq(total, valueCount) {
+          var seq = [];
+          for (var i = 0; i < total; i++) seq.push(Math.floor(Math.random() * valueCount));
+          return { seq: seq, matchSet: {} };
+        }
 
         /* ---------- game state ---------- */
         var playing = false;
@@ -652,7 +748,10 @@
         }
 
         function setAnswersEnabled(on) {
-          MODS.forEach(function (m) { ansBtns[m.key].disabled = !on; });
+          MODS.forEach(function (m) {
+            var active = game ? (gameMods(game).indexOf(m.key) >= 0) : !!currentMods[m.key];
+            ansBtns[m.key].disabled = !(on && active);
+          });
         }
         function clearPressed() {
           MODS.forEach(function (m) { ansBtns[m.key].classList.remove("pressed"); });
@@ -663,6 +762,7 @@
 
         function press(key) {
           if (!playing || !game || game.idx < 0 || game.idx >= game.total) return;
+          if (gameMods(game).indexOf(key) < 0) return;
           if (game.pressed[key]) return;
           game.pressed[key] = true;
           ansBtns[key].classList.add("pressed");
@@ -681,7 +781,9 @@
         function evaluateCurrent() {
           var g = game, i = g.idx;
           if (i < g.n) return; // first n trials are not scored
+          var active = gameMods(g);
           MODS.forEach(function (m) {
+            if (active.indexOf(m.key) < 0) return;
             var isMatch = !!g.seqs[m.key].matchSet[i];
             var pressed = !!g.pressed[m.key];
             var st = g.stats[m.key];
@@ -701,7 +803,7 @@
           cells[pos].classList.add("active");
           cells[pos].innerHTML = shapeSVG(g.seqs.shp.seq[i], g.seqs.col.seq[i]);
           statusMain.textContent = (i + 1) + "回目を表示中";
-          statusSub.textContent = "n = " + g.n + " ／ 全" + g.total + "回";
+          statusSub.textContent = "n = " + g.n + " ／ " + modNames(gameMods(g)) + " ／ 全" + g.total + "回";
           progressFill.style.width = ((i + 1) / g.total * 100) + "%";
         }
 
@@ -721,6 +823,13 @@
         }
 
         function startGame() {
+          var active = activeModKeys();
+          if (!active.length) {
+            if (modWarn) modWarn.textContent = "比べる種類を1つ以上選んでください。";
+            var sb = document.getElementById("settingsBody");
+            if (sb && sb.hidden) btnSettings.click();
+            return;
+          }
           var total = parseInt(sliders.trials.value, 10);
           var showMs = parseInt(sliders.show.value, 10);
           var gapMs = parseInt(sliders.gap.value, 10);
@@ -728,13 +837,13 @@
           var scored = total - currentN;
           var matchCount = Math.min(wantMatch, scored);
           game = {
-            n: currentN, grid: currentGrid, total: total, showMs: showMs, gapMs: gapMs,
+            n: currentN, grid: currentGrid, mods: active.slice(), total: total, showMs: showMs, gapMs: gapMs,
             idx: 0, pressed: { pos: false, col: false, shp: false },
             stats: newStats(),
             seqs: {
-              pos: genModality(total, currentN, matchCount, currentGrid * currentGrid),
-              col: genModality(total, currentN, matchCount, 6),
-              shp: genModality(total, currentN, matchCount, 6)
+              pos: active.indexOf("pos") >= 0 ? genModality(total, currentN, matchCount, currentGrid * currentGrid) : genRandomSeq(total, currentGrid * currentGrid),
+              col: active.indexOf("col") >= 0 ? genModality(total, currentN, matchCount, 6) : genRandomSeq(total, 6),
+              shp: active.indexOf("shp") >= 0 ? genModality(total, currentN, matchCount, 6) : genRandomSeq(total, 6)
             }
           };
           playing = true;
@@ -774,7 +883,7 @@
         if (saved && Array.isArray(saved.games)) {
           saved.games.forEach(function (g) {
             if (g && g.stats) {
-              sessionGames.push({ n: g.n, grid: g.grid, total: g.total, stats: g.stats, at: new Date(g.at) });
+              sessionGames.push({ n: g.n, grid: g.grid, mods: gameMods(g), total: g.total, stats: g.stats, at: new Date(g.at) });
             }
           });
         }
@@ -784,21 +893,30 @@
           if (!denom) return null;
           return Math.round(st.hit / denom * 100);
         }
-        function combinedStats(games) {
+        function combinedStats(games, onlyKeys) {
           var s = newStats();
           games.forEach(function (g) {
+            var gMods = gameMods(g);
             MODS.forEach(function (m) {
-              ["hit", "miss", "fa", "cr"].forEach(function (f) { s[m.key][f] += g.stats[m.key][f]; });
+              if (gMods.indexOf(m.key) < 0) return;
+              if (onlyKeys && onlyKeys.indexOf(m.key) < 0) return;
+              if (!g.stats[m.key]) return;
+              ["hit", "miss", "fa", "cr"].forEach(function (f) { s[m.key][f] += (g.stats[m.key][f] || 0); });
             });
           });
           return s;
         }
-        function overallAcc(stats) {
+        function overallAcc(stats, onlyKeys) {
           var agg = { hit: 0, miss: 0, fa: 0, cr: 0 };
-          MODS.forEach(function (m) {
-            ["hit", "miss", "fa", "cr"].forEach(function (f) { agg[f] += stats[m.key][f]; });
+          var keys = onlyKeys && onlyKeys.length ? onlyKeys : ALL_MOD_KEYS;
+          keys.forEach(function (k) {
+            if (!stats[k]) return;
+            ["hit", "miss", "fa", "cr"].forEach(function (f) { agg[f] += (stats[k][f] || 0); });
           });
           return accOf(agg);
+        }
+        function overallAccForGame(g) {
+          return overallAcc(g.stats, gameMods(g));
         }
         function fmt(v) { return v === null ? "–" : String(v); }
 
@@ -809,20 +927,25 @@
           statusSub.textContent = "";
           progressFill.style.width = "100%";
 
-          sessionGames.push({ n: finished.n, grid: finished.grid, total: finished.total, stats: finished.stats, at: new Date() });
+          sessionGames.push({ n: finished.n, grid: finished.grid, mods: gameMods(finished), total: finished.total, stats: finished.stats, at: new Date() });
           saveStore();
-          renderResults(finished.stats);
+          renderResults(finished.stats, gameMods(finished));
           renderRecord();
         }
 
-        function renderResults(stats) {
-          document.getElementById("resAll").textContent = fmt(overallAcc(stats));
+        function renderResults(stats, modsForGame) {
+          var active = modsForGame && modsForGame.length ? modsForGame : activeModKeys();
+          document.getElementById("resAll").textContent = fmt(overallAcc(stats, active));
           document.getElementById("resPos").textContent = fmt(accOf(stats.pos));
           document.getElementById("resCol").textContent = fmt(accOf(stats.col));
           document.getElementById("resShp").textContent = fmt(accOf(stats.shp));
+          document.querySelectorAll("[data-res-mod]").forEach(function (el) {
+            el.hidden = active.indexOf(el.getAttribute("data-res-mod")) < 0;
+          });
           var wrap = document.getElementById("resultDetails");
           wrap.innerHTML = "";
           MODS.forEach(function (m) {
+            if (active.indexOf(m.key) < 0) return;
             var st = stats[m.key];
             var row = document.createElement("div");
             row.className = "detail-row";
@@ -836,11 +959,15 @@
         }
 
         function renderRecord() {
-          var stats = combinedStats(sessionGames);
-          document.getElementById("totAll").textContent = fmt(overallAcc(stats));
+          var active = activeModKeys();
+          var stats = combinedStats(sessionGames, active);
+          document.getElementById("totAll").textContent = fmt(overallAcc(stats, active));
           document.getElementById("totPos").textContent = fmt(accOf(stats.pos));
           document.getElementById("totCol").textContent = fmt(accOf(stats.col));
           document.getElementById("totShp").textContent = fmt(accOf(stats.shp));
+          document.querySelectorAll("[data-tot-mod]").forEach(function (el) {
+            el.hidden = active.indexOf(el.getAttribute("data-tot-mod")) < 0;
+          });
           document.getElementById("historyEmpty").hidden = sessionGames.length > 0;
           document.getElementById("recordActions").hidden = sessionGames.length === 0;
           var list = document.getElementById("historyList");
@@ -855,12 +982,13 @@
             var hh = ("0" + g.at.getHours()).slice(-2);
             var mm = ("0" + g.at.getMinutes()).slice(-2);
             var gGrid = (g.grid === 2 || g.grid === 3 || g.grid === 4 || g.grid === 5) ? g.grid : 4;
+            var gMods = gameMods(g);
             left.innerHTML = '<span class="h-when">' + mo + "/" + dd + " " + hh + ":" + mm + "</span>　" +
-              (realIdx + 1) + "回目： n=" + g.n + "、盤面" + gGrid + "×" + gGrid + "、" + g.total + "回表示";
+              (realIdx + 1) + "回目： n=" + g.n + "、" + modNames(gMods) + "、盤面" + gGrid + "×" + gGrid + "、" + g.total + "回表示";
             var right = document.createElement("span");
             right.className = "h-right";
             var acc = document.createElement("span");
-            acc.innerHTML = "全体 <b>" + fmt(overallAcc(g.stats)) + "%</b>";
+            acc.innerHTML = "全体 <b>" + fmt(overallAccForGame(g)) + "%</b>";
             var del = document.createElement("button");
             del.type = "button";
             del.className = "h-del";
