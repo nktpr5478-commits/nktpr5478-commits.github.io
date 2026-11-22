@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="data:," />
-    <meta name="description" content="位置・色・形の3つを同時に覚えるトリプルnバックトレーニング。ワーキングメモリを鍛える脳トレが、ブラウザでそのまま無料で遊べます。n=1〜3対応、正解率の記録つき。" />
+    <meta name="description" content="位置・色・形の3つを同時に覚えるトリプルnバックトレーニング。ワーキングメモリを鍛える脳トレが、ブラウザでそのまま無料で遊べます。n=1〜3対応、盤面は2×2〜5×5から選べます。正解率の記録つき。" />
     <title>トリプルnバックトレーニング｜ワーキングメモリの脳トレ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -89,9 +89,13 @@
       .status-main { font-weight: 900; font-size: 18px; }
       .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; }
       .board {
-        display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+        display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); gap: 8px;
         width: 100%; max-width: 400px; margin: 0 auto;
       }
+      .board.cols-5 { gap: 6px; }
+      .board.cols-5 .cell { border-radius: 6px; border-width: 1px; }
+      .board.cols-2 { gap: 10px; }
+      .board.cols-2 .cell { border-radius: 10px; }
       .cell {
         aspect-ratio: 1 / 1;
         background: var(--cell);
@@ -295,6 +299,15 @@
 
               <div class="slider-block">
                 <div class="slider-head">
+                  <label for="rngGrid">盤面の大きさ</label>
+                  <span class="slider-val"><span id="valGrid">4×4</span></span>
+                </div>
+                <input type="range" id="rngGrid" min="2" max="5" step="1" value="4" />
+                <div class="slider-scale"><span>2×2</span><span>5×5</span></div>
+              </div>
+
+              <div class="slider-block">
+                <div class="slider-head">
                   <label for="rngShow">表示時間</label>
                   <span class="slider-val"><span id="valShow">2500</span><span class="unit">ミリ秒</span></span>
                 </div>
@@ -388,7 +401,7 @@
             <h2 style="color:var(--ink)">遊び方</h2>
             <p>盤面に図形が1つずつ表示されます。<b>n個前</b>の図形と比べて、<b>位置</b>が同じなら「位置」、<b>色</b>が同じなら「色」、<b>形</b>が同じなら「形」のボタンを押してください。複数の条件が同時に当てはまることもあります。</p>
             <p>最初のn回は比べる相手がないので、採点されません。パソコンではキーボードの <b>A（位置）・S（色）・D（形）</b> でも答えられます。</p>
-            <p>色は あか・きいろ・みどり・みずいろ・あお・むらさき の6色、形は まる・しかく・さんかく・ひしがた・ほし・ろっかく の6種類です。</p>
+            <p>色は あか・きいろ・みどり・みずいろ・あお・むらさき の6色、形は まる・しかく・さんかく・ひしがた・ほし・ろっかく の6種類です。盤面の大きさは設定で 2×2・3×3・4×4・5×5 から選べます。</p>
           </section>
         </div>
       </div>
@@ -433,13 +446,14 @@
             window.localStorage.setItem(STORE_KEY, JSON.stringify({
               settings: {
                 n: currentN,
+                grid: currentGrid,
                 show: sliders.show.value,
                 gap: sliders.gap.value,
                 trials: sliders.trials.value,
                 match: sliders.match.value
               },
               games: sessionGames.map(function (g) {
-                return { n: g.n, total: g.total, at: g.at.getTime(), stats: g.stats };
+                return { n: g.n, grid: g.grid, total: g.total, at: g.at.getTime(), stats: g.stats };
               })
             }));
           } catch (e) { /* storage full or blocked: keep playing in-memory */ }
@@ -463,12 +477,22 @@
         /* ---------- dom ---------- */
         var boardEl = document.getElementById("board");
         var cells = [];
-        for (var i = 0; i < 16; i++) {
-          var d = document.createElement("div");
-          d.className = "cell";
-          boardEl.appendChild(d);
-          cells.push(d);
+        var currentGrid = 4;
+        function buildBoard(size) {
+          boardEl.innerHTML = "";
+          cells = [];
+          boardEl.style.setProperty("--cols", size);
+          boardEl.className = "board cols-" + size;
+          boardEl.setAttribute("aria-label", size + "かける" + size + "の盤面");
+          var count = size * size;
+          for (var i = 0; i < count; i++) {
+            var d = document.createElement("div");
+            d.className = "cell";
+            boardEl.appendChild(d);
+            cells.push(d);
+          }
         }
+        buildBoard(currentGrid);
         var statusMain = document.getElementById("statusMain");
         var statusSub = document.getElementById("statusSub");
         var progressFill = document.getElementById("progressFill");
@@ -500,6 +524,21 @@
           });
         });
 
+        var rngGrid = document.getElementById("rngGrid");
+        var valGrid = document.getElementById("valGrid");
+        function updateGridLabel() {
+          if (valGrid) valGrid.textContent = currentGrid + "×" + currentGrid;
+        }
+        if (rngGrid) {
+          rngGrid.addEventListener("input", function () {
+            currentGrid = parseInt(rngGrid.value, 10);
+            if (!(currentGrid >= 2 && currentGrid <= 5)) currentGrid = 4;
+            updateGridLabel();
+            buildBoard(currentGrid);
+            saveStore();
+          });
+        }
+
         var currentN = 2;
         var nBtns = document.querySelectorAll(".n-seg button");
         nBtns.forEach(function (b) {
@@ -528,6 +567,12 @@
             });
             var note2 = document.querySelector(".n-note");
             if (note2) note2.textContent = "「" + currentN + "つ前」と比べます";
+          }
+          if (st.grid === 2 || st.grid === 3 || st.grid === 4 || st.grid === 5) {
+            currentGrid = st.grid;
+            if (rngGrid) rngGrid.value = String(currentGrid);
+            updateGridLabel();
+            buildBoard(currentGrid);
           }
         }
 
@@ -653,11 +698,11 @@
           var scored = total - currentN;
           var matchCount = Math.min(wantMatch, scored);
           game = {
-            n: currentN, total: total, showMs: showMs, gapMs: gapMs,
+            n: currentN, grid: currentGrid, total: total, showMs: showMs, gapMs: gapMs,
             idx: 0, pressed: { pos: false, col: false, shp: false },
             stats: newStats(),
             seqs: {
-              pos: genModality(total, currentN, matchCount, 16),
+              pos: genModality(total, currentN, matchCount, currentGrid * currentGrid),
               col: genModality(total, currentN, matchCount, 6),
               shp: genModality(total, currentN, matchCount, 6)
             }
@@ -697,7 +742,7 @@
         if (saved && Array.isArray(saved.games)) {
           saved.games.forEach(function (g) {
             if (g && g.stats) {
-              sessionGames.push({ n: g.n, total: g.total, stats: g.stats, at: new Date(g.at) });
+              sessionGames.push({ n: g.n, grid: g.grid, total: g.total, stats: g.stats, at: new Date(g.at) });
             }
           });
         }
@@ -732,7 +777,7 @@
           statusSub.textContent = "";
           progressFill.style.width = "100%";
 
-          sessionGames.push({ n: finished.n, total: finished.total, stats: finished.stats, at: new Date() });
+          sessionGames.push({ n: finished.n, grid: finished.grid, total: finished.total, stats: finished.stats, at: new Date() });
           saveStore();
           renderResults(finished.stats);
           renderRecord();
@@ -777,8 +822,9 @@
             var dd = g.at.getDate();
             var hh = ("0" + g.at.getHours()).slice(-2);
             var mm = ("0" + g.at.getMinutes()).slice(-2);
+            var gGrid = (g.grid === 2 || g.grid === 3 || g.grid === 4 || g.grid === 5) ? g.grid : 4;
             left.innerHTML = '<span class="h-when">' + mo + "/" + dd + " " + hh + ":" + mm + "</span>　" +
-              (realIdx + 1) + "回目： n=" + g.n + "、" + g.total + "回表示";
+              (realIdx + 1) + "回目： n=" + g.n + "、盤面" + gGrid + "×" + gGrid + "、" + g.total + "回表示";
             var right = document.createElement("span");
             right.className = "h-right";
             var acc = document.createElement("span");
