@@ -102,7 +102,7 @@
       .status-main { font-weight: 900; font-size: 18px; }
       .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; }
       .board {
-        display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); gap: 8px;
+        display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 8px;
         width: 100%; max-width: 400px; margin: 0 auto;
       }
       .board.cols-5 { gap: 6px; }
@@ -285,7 +285,7 @@
             <span class="status-sub" id="statusSub"></span>
           </div>
 
-          <div class="board" id="board" aria-label="4かける4の盤面"></div>
+          <div class="board" id="board" aria-label="3かける3の盤面"></div>
 
           <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
 
@@ -340,9 +340,9 @@
               <div class="slider-block">
                 <div class="slider-head">
                   <label for="rngGrid">盤面の大きさ</label>
-                  <span class="slider-val"><span id="valGrid">4×4</span></span>
+                  <span class="slider-val"><span id="valGrid">3×3</span></span>
                 </div>
-                <input type="range" id="rngGrid" min="2" max="5" step="1" value="4" />
+                <input type="range" id="rngGrid" min="2" max="5" step="1" value="3" />
                 <div class="slider-scale"><span>2×2</span><span>5×5</span></div>
               </div>
 
@@ -541,7 +541,7 @@
         /* ---------- dom ---------- */
         var boardEl = document.getElementById("board");
         var cells = [];
-        var currentGrid = 4;
+        var currentGrid = 3;
         function buildBoard(size) {
           boardEl.innerHTML = "";
           cells = [];
@@ -645,7 +645,7 @@
         if (rngGrid) {
           rngGrid.addEventListener("input", function () {
             currentGrid = parseInt(rngGrid.value, 10);
-            if (!(currentGrid >= 2 && currentGrid <= 5)) currentGrid = 4;
+            if (!(currentGrid >= 2 && currentGrid <= 5)) currentGrid = 3;
             updateGridLabel();
             buildBoard(currentGrid);
             saveStore();
