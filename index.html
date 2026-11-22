@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="data:," />
-    <meta name="description" content="位置・色・形から比べる種類を自由に選べるnバックトレーニング。ワーキングメモリを鍛える脳トレが、ブラウザでそのまま無料で遊べます。n=1〜3対応、盤面は2×2〜5×5から選べます。正解率の記録つき。" />
+    <meta name="description" content="位置・色・形から比べる種類を自由に選べるnバックトレーニング。ワーキングメモリを鍛える脳トレが、ブラウザでそのまま無料で遊べます。n=1〜3対応、盤面は2×2〜5×5から選べます。ひらがな（五十音）だけを比べるモードもあります。正解率の記録つき。" />
     <title>トリプルnバックトレーニング｜ワーキングメモリの脳トレ</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -118,6 +118,15 @@
       }
       .cell.active { background: var(--cell-active); border-color: var(--accent); }
       .cell svg { width: 72%; height: 72%; display: block; }
+
+      /* ---- hiragana stage ---- */
+      .kana-stage {
+        width: 100%; max-width: 400px; margin: 0 auto; aspect-ratio: 1 / 1;
+        background: var(--cell); border: 1.5px solid var(--cell-line); border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .kana-char { font-size: clamp(120px, 40vw, 190px); font-weight: 900; line-height: 1; }
+      .is-off { opacity: .45; }
 
       .progress-track { height: 6px; background: var(--surface-2); border-radius: 3px; margin: 16px 0 4px; overflow: hidden; }
       .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; transition: width .2s linear; }
@@ -254,6 +263,7 @@
         header.top h1 { font-size: 34px; }
         .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
         .board { max-width: 480px; }
+        .kana-stage { max-width: 480px; }
         .acc-grid { grid-template-columns: repeat(2, 1fr); }
       }
       /* ---- PC ---- */
@@ -261,6 +271,7 @@
         .wrap { max-width: 1180px; }
         .layout { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
         .board { max-width: 520px; }
+        .kana-stage { max-width: 520px; }
         .ans-btn { min-height: 88px; }
         .ans-btn .ans-name { font-size: 24px; }
       }
@@ -287,6 +298,10 @@
 
           <div class="board" id="board" aria-label="3かける3の盤面"></div>
 
+          <div class="kana-stage" id="kanaStage" hidden aria-label="ひらがなの表示">
+            <span class="kana-char" id="kanaChar"></span>
+          </div>
+
           <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
 
           <div class="answers" id="answersRow">
@@ -298,6 +313,9 @@
             </button>
             <button type="button" class="ans-btn" id="btnShp" data-mod="shp" disabled>
               <span class="ans-name">形</span><span class="ans-key">Dキー</span>
+            </button>
+            <button type="button" class="ans-btn" id="btnKana" data-mod="kana" disabled hidden>
+              <span class="ans-name">ひらがな</span><span class="ans-key">Aキー</span>
             </button>
           </div>
 
@@ -317,7 +335,7 @@
             </button>
             <div class="settings-body" id="settingsBody" hidden>
             <fieldset id="settingsFieldset">
-              <div class="mod-row">
+              <div class="mod-row" id="modsRow">
                 <span class="mod-label" id="modLabel">比べる種類（1つ以上選んでください）</span>
                 <div class="mod-seg" role="group" aria-labelledby="modLabel">
                   <button type="button" data-mod-toggle="pos" class="selected" aria-pressed="true"><span class="mod-check" aria-hidden="true">✓</span>位置</button>
@@ -326,6 +344,13 @@
                 </div>
                 <div class="mod-note">選んだ種類だけが出題・判定の対象になります。たとえば「位置だけ」「色と形」など自由に組み合わせられます。</div>
                 <div class="mod-warn" id="modWarn" aria-live="polite"></div>
+              </div>
+              <div class="mod-row">
+                <span class="mod-label" id="kanaLabel">ひらがなモード</span>
+                <div class="mod-seg" role="group" aria-labelledby="kanaLabel">
+                  <button type="button" id="btnKanaMode" aria-pressed="false"><span class="mod-check" aria-hidden="true"></span>ひらがな</button>
+                </div>
+                <div class="mod-note">チェックを付けると、五十音の文字だけを比べるnバックになります。オンのあいだは「比べる種類」と「盤面の大きさ」は使いません（位置・色・形は出題されません）。</div>
               </div>
               <div class="n-row">
                 <span class="n-label" id="nLabel">むずかしさ（n）</span>
@@ -337,7 +362,7 @@
                 <span class="n-note">「2つ前」と比べます</span>
               </div>
 
-              <div class="slider-block">
+              <div class="slider-block" id="gridBlock">
                 <div class="slider-head">
                   <label for="rngGrid">盤面の大きさ</label>
                   <span class="slider-val"><span id="valGrid">3×3</span></span>
@@ -406,6 +431,10 @@
                 <div class="acc-name">形</div>
                 <div class="acc-num"><span id="resShp">–</span><span class="pct">%</span></div>
               </div>
+              <div class="acc-box" data-res-mod="kana" hidden>
+                <div class="acc-name">ひらがな</div>
+                <div class="acc-num"><span id="resKana">–</span><span class="pct">%</span></div>
+              </div>
             </div>
             <div class="detail-list" id="resultDetails"></div>
           </section>
@@ -430,6 +459,10 @@
                 <div class="acc-name">形</div>
                 <div class="acc-num"><span id="totShp">–</span><span class="pct">%</span></div>
               </div>
+              <div class="acc-box" data-tot-mod="kana" hidden>
+                <div class="acc-name">ひらがな</div>
+                <div class="acc-num"><span id="totKana">–</span><span class="pct">%</span></div>
+              </div>
             </div>
             <p class="empty-note" id="historyEmpty">まだ記録がありません。1回遊ぶと、ここに通算の正解率と履歴が出ます。</p>
             <ul class="history-list" id="historyList"></ul>
@@ -443,6 +476,7 @@
             <p>盤面に図形が1つずつ表示されます。<b>n個前</b>の図形と比べて、設定で選んだ種類が同じなら、そのボタンを押してください。たとえば位置だけを選べば位置だけ、色と形を選べばその2つだけを比べます。複数の条件が同時に当てはまることもあります。</p>
             <p>最初のn回は比べる相手がないので、採点されません。パソコンではキーボードの <b>A（位置）・S（色）・D（形）</b> でも答えられます（選んだ種類だけ有効です）。</p>
             <p>色は あか・きいろ・みどり・みずいろ・あお・むらさき の6色、形は まる・しかく・さんかく・ひしがた・ほし・ろっかく の6種類です。盤面の大きさは設定で 2×2・3×3・4×4・5×5 から選べます。</p>
+            <p>設定の<b>ひらがなモード</b>にチェックを付けると、五十音の文字が1つずつ大きく中央に表示される、ひらがなだけのnバックになります。このとき位置・色・形は使いません。n個前と同じ文字が出たら<b>「ひらがな」ボタン（Aキー）</b>を押してください。</p>
           </section>
         </div>
       </div>
@@ -455,13 +489,17 @@
         /* ---------- constants ---------- */
         var COLOR_NAMES = ["あか", "きいろ", "みどり", "みずいろ", "あお", "むらさき"];
         var SHAPE_NAMES = ["まる", "しかく", "さんかく", "ひしがた", "ほし", "ろっかく"];
+        /* gojuon: the 46 basic kana (ゐ・ゑ excluded) */
+        var KANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん".split("");
         var MODS = [
           { key: "pos", name: "位置" },
           { key: "col", name: "色" },
-          { key: "shp", name: "形" }
+          { key: "shp", name: "形" },
+          { key: "kana", name: "ひらがな" }
         ];
-        var ALL_MOD_KEYS = ["pos", "col", "shp"];
+        var ALL_MOD_KEYS = ["pos", "col", "shp", "kana"];
         var currentMods = { pos: true, col: true, shp: true };
+        var kanaMode = false;
         function activeModKeys() {
           return ALL_MOD_KEYS.filter(function (k) { return !!currentMods[k]; });
         }
@@ -511,6 +549,7 @@
                 n: currentN,
                 grid: currentGrid,
                 mods: activeModKeys(),
+                kana: kanaMode,
                 show: sliders.show.value,
                 gap: sliders.gap.value,
                 trials: sliders.trials.value,
@@ -577,12 +616,16 @@
         var ansBtns = {
           pos: document.getElementById("btnPos"),
           col: document.getElementById("btnCol"),
-          shp: document.getElementById("btnShp")
+          shp: document.getElementById("btnShp"),
+          kana: document.getElementById("btnKana")
         };
         var answersRow = document.getElementById("answersRow");
         var headerSub = document.getElementById("headerSub");
         var modWarn = document.getElementById("modWarn");
         var modToggleBtns = document.querySelectorAll("[data-mod-toggle]");
+        var btnKanaMode = document.getElementById("btnKanaMode");
+        var kanaStage = document.getElementById("kanaStage");
+        var kanaChar = document.getElementById("kanaChar");
         function applyModsUI() {
           var active = activeModKeys();
           modToggleBtns.forEach(function (b) {
@@ -590,15 +633,33 @@
             var on = !!currentMods[k];
             b.classList.toggle("selected", on);
             b.setAttribute("aria-pressed", on ? "true" : "false");
+            b.disabled = kanaMode;
             var chk = b.querySelector(".mod-check");
             if (chk) chk.textContent = on ? "✓" : "";
           });
+          if (btnKanaMode) {
+            btnKanaMode.classList.toggle("selected", kanaMode);
+            btnKanaMode.setAttribute("aria-pressed", kanaMode ? "true" : "false");
+            var kchk = btnKanaMode.querySelector(".mod-check");
+            if (kchk) kchk.textContent = kanaMode ? "✓" : "";
+          }
+          var modsRow = document.getElementById("modsRow");
+          if (modsRow) modsRow.classList.toggle("is-off", kanaMode);
+          var gridBlock = document.getElementById("gridBlock");
+          if (gridBlock) gridBlock.classList.toggle("is-off", kanaMode);
+          if (typeof rngGrid !== "undefined" && rngGrid) rngGrid.disabled = kanaMode;
           MODS.forEach(function (m) {
-            if (ansBtns[m.key]) ansBtns[m.key].hidden = !currentMods[m.key];
+            if (!ansBtns[m.key]) return;
+            if (m.key === "kana") ansBtns[m.key].hidden = !kanaMode;
+            else ansBtns[m.key].hidden = kanaMode || !currentMods[m.key];
           });
-          if (answersRow) answersRow.style.gridTemplateColumns = "repeat(" + Math.max(1, active.length) + ", 1fr)";
+          var shown = kanaMode ? 1 : Math.max(1, active.length);
+          if (answersRow) answersRow.style.gridTemplateColumns = "repeat(" + shown + ", 1fr)";
+          if (boardEl) boardEl.hidden = kanaMode;
+          if (kanaStage) kanaStage.hidden = !kanaMode;
           if (headerSub) {
-            if (active.length === 3) headerSub.textContent = "位置・色・形の3つを同時に覚える、トリプルnバックです。";
+            if (kanaMode) headerSub.textContent = "ひらがなだけを覚える、nバックです。";
+            else if (active.length === 3) headerSub.textContent = "位置・色・形の3つを同時に覚える、トリプルnバックです。";
             else if (active.length === 2) headerSub.textContent = modNames(active) + "の2つを同時に覚える、ダブルnバックです。";
             else headerSub.textContent = modNames(active) + "だけを覚える、シングルnバックです。";
           }
@@ -617,6 +678,13 @@
             saveStore();
           });
         });
+        if (btnKanaMode) {
+          btnKanaMode.addEventListener("click", function () {
+            kanaMode = !kanaMode;
+            applyModsUI();
+            saveStore();
+          });
+        }
 
         var sliders = {
           show: document.getElementById("rngShow"),
@@ -688,12 +756,13 @@
             buildBoard(currentGrid);
           }
           if (st.mods) {
-            var restored = gameMods({ mods: st.mods });
+            var restored = gameMods({ mods: st.mods }).filter(function (k) { return k !== "kana"; });
             if (restored && restored.length) {
               currentMods = { pos: false, col: false, shp: false };
               restored.forEach(function (k) { currentMods[k] = true; });
             }
           }
+          if (st.kana === true) kanaMode = true;
         }
         applyModsUI();
 
@@ -749,7 +818,10 @@
 
         function setAnswersEnabled(on) {
           MODS.forEach(function (m) {
-            var active = game ? (gameMods(game).indexOf(m.key) >= 0) : !!currentMods[m.key];
+            var active;
+            if (game) active = gameMods(game).indexOf(m.key) >= 0;
+            else if (m.key === "kana") active = kanaMode;
+            else active = !!currentMods[m.key];
             ansBtns[m.key].disabled = !(on && active);
           });
         }
@@ -758,6 +830,7 @@
         }
         function clearBoard() {
           cells.forEach(function (c) { c.classList.remove("active"); c.innerHTML = ""; });
+          if (kanaChar) kanaChar.textContent = "";
         }
 
         function press(key) {
@@ -773,6 +846,10 @@
         document.addEventListener("keydown", function (e) {
           if (!playing || e.repeat) return;
           var k = e.key.toLowerCase();
+          if (game && gameMods(game).indexOf("kana") >= 0) {
+            if (k === "a") press("kana");
+            return;
+          }
           if (k === "a") press("pos");
           else if (k === "s") press("col");
           else if (k === "d") press("shp");
@@ -796,12 +873,16 @@
 
         function showTrial() {
           var g = game, i = g.idx;
-          g.pressed = { pos: false, col: false, shp: false };
+          g.pressed = { pos: false, col: false, shp: false, kana: false };
           clearPressed();
           clearBoard();
-          var pos = g.seqs.pos.seq[i];
-          cells[pos].classList.add("active");
-          cells[pos].innerHTML = shapeSVG(g.seqs.shp.seq[i], g.seqs.col.seq[i]);
+          if (gameMods(g).indexOf("kana") >= 0) {
+            kanaChar.textContent = KANA[g.seqs.kana.seq[i]];
+          } else {
+            var pos = g.seqs.pos.seq[i];
+            cells[pos].classList.add("active");
+            cells[pos].innerHTML = shapeSVG(g.seqs.shp.seq[i], g.seqs.col.seq[i]);
+          }
           statusMain.textContent = (i + 1) + "回目を表示中";
           statusSub.textContent = "n = " + g.n + " ／ " + modNames(gameMods(g)) + " ／ 全" + g.total + "回";
           progressFill.style.width = ((i + 1) / g.total * 100) + "%";
@@ -823,7 +904,7 @@
         }
 
         function startGame() {
-          var active = activeModKeys();
+          var active = kanaMode ? ["kana"] : activeModKeys();
           if (!active.length) {
             if (modWarn) modWarn.textContent = "比べる種類を1つ以上選んでください。";
             var sb = document.getElementById("settingsBody");
@@ -838,12 +919,13 @@
           var matchCount = Math.min(wantMatch, scored);
           game = {
             n: currentN, grid: currentGrid, mods: active.slice(), total: total, showMs: showMs, gapMs: gapMs,
-            idx: 0, pressed: { pos: false, col: false, shp: false },
+            idx: 0, pressed: { pos: false, col: false, shp: false, kana: false },
             stats: newStats(),
             seqs: {
               pos: active.indexOf("pos") >= 0 ? genModality(total, currentN, matchCount, currentGrid * currentGrid) : genRandomSeq(total, currentGrid * currentGrid),
               col: active.indexOf("col") >= 0 ? genModality(total, currentN, matchCount, 6) : genRandomSeq(total, 6),
-              shp: active.indexOf("shp") >= 0 ? genModality(total, currentN, matchCount, 6) : genRandomSeq(total, 6)
+              shp: active.indexOf("shp") >= 0 ? genModality(total, currentN, matchCount, 6) : genRandomSeq(total, 6),
+              kana: active.indexOf("kana") >= 0 ? genModality(total, currentN, matchCount, KANA.length) : genRandomSeq(total, KANA.length)
             }
           };
           playing = true;
@@ -939,6 +1021,7 @@
           document.getElementById("resPos").textContent = fmt(accOf(stats.pos));
           document.getElementById("resCol").textContent = fmt(accOf(stats.col));
           document.getElementById("resShp").textContent = fmt(accOf(stats.shp));
+          document.getElementById("resKana").textContent = fmt(accOf(stats.kana));
           document.querySelectorAll("[data-res-mod]").forEach(function (el) {
             el.hidden = active.indexOf(el.getAttribute("data-res-mod")) < 0;
           });
@@ -959,12 +1042,13 @@
         }
 
         function renderRecord() {
-          var active = activeModKeys();
+          var active = kanaMode ? ["kana"] : activeModKeys();
           var stats = combinedStats(sessionGames, active);
           document.getElementById("totAll").textContent = fmt(overallAcc(stats, active));
           document.getElementById("totPos").textContent = fmt(accOf(stats.pos));
           document.getElementById("totCol").textContent = fmt(accOf(stats.col));
           document.getElementById("totShp").textContent = fmt(accOf(stats.shp));
+          document.getElementById("totKana").textContent = fmt(accOf(stats.kana));
           document.querySelectorAll("[data-tot-mod]").forEach(function (el) {
             el.hidden = active.indexOf(el.getAttribute("data-tot-mod")) < 0;
           });
@@ -983,8 +1067,10 @@
             var mm = ("0" + g.at.getMinutes()).slice(-2);
             var gGrid = (g.grid === 2 || g.grid === 3 || g.grid === 4 || g.grid === 5) ? g.grid : 4;
             var gMods = gameMods(g);
-            left.innerHTML = '<span class="h-when">' + mo + "/" + dd + " " + hh + ":" + mm + "</span>　" +
-              (realIdx + 1) + "回目： n=" + g.n + "、" + modNames(gMods) + "、盤面" + gGrid + "×" + gGrid + "、" + g.total + "回表示";
+            var desc = (realIdx + 1) + "回目： n=" + g.n + "、" + modNames(gMods);
+            if (gMods.indexOf("kana") < 0) desc += "、盤面" + gGrid + "×" + gGrid;
+            desc += "、" + g.total + "回表示";
+            left.innerHTML = '<span class="h-when">' + mo + "/" + dd + " " + hh + ":" + mm + "</span>　" + desc;
             var right = document.createElement("span");
             right.className = "h-right";
             var acc = document.createElement("span");
