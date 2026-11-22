@@ -23,8 +23,8 @@
         --accent-ink: #ffffff;
         --warn: #b3402a;
         --good: #0e6b5c;
-        --cell: #ffffff;
-        --cell-line: #cfd8d4;
+        --cell: #e7edea;
+        --cell-line: #7e968b;
         --cell-active: #dcefe9;
         --shadow: 0 1px 2px rgba(20, 40, 35, .06), 0 8px 24px rgba(20, 40, 35, .06);
       }
@@ -41,8 +41,8 @@
           --accent-ink: #0b1512;
           --warn: #e07a5f;
           --good: #4cc3ab;
-          --cell: #1b2326;
-          --cell-line: #33403f;
+          --cell: #283336;
+          --cell-line: #63756f;
           --cell-active: #173b33;
           --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
         }
@@ -112,7 +112,7 @@
       .cell {
         aspect-ratio: 1 / 1;
         background: var(--cell);
-        border: 1.5px solid var(--cell-line);
+        border: 2px solid var(--cell-line);
         border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
       }
@@ -296,7 +296,7 @@
             <span class="status-sub" id="statusSub"></span>
           </div>
 
-          <div class="board" id="board" aria-label="3かける3の盤面"></div>
+          <div class="board cols-3" id="board" style="--cols: 3" aria-label="3かける3の盤面"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
 
           <div class="kana-stage" id="kanaStage" hidden aria-label="ひらがなの表示">
             <span class="kana-char" id="kanaChar"></span>
