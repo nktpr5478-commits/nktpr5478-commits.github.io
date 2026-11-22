@@ -780,9 +780,9 @@
         }
 
         function accOf(st) {
-          var total = st.hit + st.miss + st.fa + st.cr;
-          if (!total) return null;
-          return Math.round((st.hit + st.cr) / total * 100);
+          var denom = st.hit + st.miss + st.fa;
+          if (!denom) return null;
+          return Math.round(st.hit / denom * 100);
         }
         function combinedStats(games) {
           var s = newStats();
