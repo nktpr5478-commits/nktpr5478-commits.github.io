@@ -81,6 +81,19 @@
       }
       .panel h2 { font-size: 17px; margin: 0 0 12px; font-weight: 900; }
 
+      /* ---- settings toggle ---- */
+      .settings-toggle {
+        display: flex; align-items: center; gap: 10px;
+        width: 100%; padding: 2px 0; min-height: 48px;
+        background: none; border: none; color: var(--ink);
+        font-size: 17px; font-weight: 900; text-align: left;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .settings-toggle .gear { width: 26px; height: 26px; flex: 0 0 auto; color: var(--accent); display: block; }
+      .settings-toggle .chev { margin-left: auto; color: var(--ink-soft); font-size: 14px; }
+      .settings-toggle:disabled { opacity: .45; cursor: default; }
+      .settings-body { margin-top: 14px; }
+
       /* ---- board ---- */
       .status-row {
         display: flex; justify-content: space-between; align-items: baseline;
@@ -285,7 +298,12 @@
         <!-- side column -->
         <div class="col-side">
           <section class="panel" aria-label="設定">
-            <h2>設定</h2>
+            <button type="button" class="settings-toggle" id="btnSettings" aria-expanded="false" aria-controls="settingsBody">
+              <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>設定</span>
+              <span class="chev" id="settingsChev" aria-hidden="true">▼ 開く</span>
+            </button>
+            <div class="settings-body" id="settingsBody" hidden>
             <fieldset id="settingsFieldset">
               <div class="n-row">
                 <span class="n-label" id="nLabel">むずかしさ（n）</span>
@@ -344,6 +362,7 @@
 
               <p class="settings-note">一致回数は、位置・色・形のそれぞれで、採点される回の中にちょうどその回数だけ「n個前と一致」が出る設定です。一致する場所は毎回ランダムに散らばります。</p>
             </fieldset>
+            </div>
           </section>
 
           <section class="panel" id="resultPanel" hidden aria-label="結果">
@@ -499,6 +518,17 @@
         var btnStart = document.getElementById("btnStart");
         var btnStop = document.getElementById("btnStop");
         var fieldset = document.getElementById("settingsFieldset");
+
+        /* settings panel: collapsed by default, toggled by the gear button */
+        var btnSettings = document.getElementById("btnSettings");
+        var settingsBody = document.getElementById("settingsBody");
+        var settingsChev = document.getElementById("settingsChev");
+        btnSettings.addEventListener("click", function () {
+          var open = settingsBody.hidden;
+          settingsBody.hidden = !open;
+          btnSettings.setAttribute("aria-expanded", open ? "true" : "false");
+          settingsChev.textContent = open ? "▲ 閉じる" : "▼ 開く";
+        });
         var ansBtns = {
           pos: document.getElementById("btnPos"),
           col: document.getElementById("btnCol"),
@@ -710,6 +740,7 @@
           playing = true;
           document.getElementById("resultPanel").hidden = true;
           fieldset.disabled = true;
+          btnSettings.disabled = true;
           btnStart.hidden = true;
           btnStop.hidden = false;
           setAnswersEnabled(true);
@@ -726,6 +757,7 @@
           clearPressed();
           setAnswersEnabled(false);
           fieldset.disabled = false;
+          btnSettings.disabled = false;
           btnStart.hidden = false;
           btnStop.hidden = true;
         }
