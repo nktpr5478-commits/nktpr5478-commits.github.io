@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="data:," />
+    <meta name="description" content="位置・色・形の3つを同時に覚えるトリプルnバックトレーニング。ワーキングメモリを鍛える脳トレが、ブラウザでそのまま無料で遊べます。n=1〜3対応、正解率の記録つき。" />
     <title>トリプルnバックトレーニング｜ワーキングメモリの脳トレ</title>
-    <meta name="description" content="位置・色・形を同時に覚えるトリプルnバックトレーニング。縦4×横4マス、n=1〜3対応。表示の速さや回数を自分で調整できる無料の脳トレです。" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Zen+Old+Mincho:wght@700&display=swap" rel="stylesheet" />
@@ -196,7 +196,23 @@
       }
       .history-list li:first-child { border-top: none; padding-top: 2px; }
       .history-list .h-when { color: var(--ink-soft); }
+      .history-list .h-main { flex: 1 1 auto; }
+      .history-list .h-right { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+      .h-del {
+        min-height: 36px; padding: 4px 10px; font-size: 13px; font-weight: 700;
+        background: var(--surface); color: var(--warn);
+        border: 1.5px solid var(--line); border-radius: 8px;
+      }
+      .h-del.confirm { background: var(--warn); border-color: var(--warn); color: #fff; }
       .empty-note { color: var(--ink-soft); font-size: 14px; margin: 0; }
+      .storage-note { color: var(--ink-soft); font-size: 13px; margin: 0 0 12px; }
+      .record-actions { margin-top: 14px; }
+      .btn-clear {
+        background: var(--surface); color: var(--warn);
+        border: 1.5px solid var(--warn); border-radius: 10px;
+        font-size: 14px; font-weight: 700; padding: 8px 14px; min-height: 44px;
+      }
+      .btn-clear.confirm { background: var(--warn); color: #fff; }
 
       .howto { font-size: 14.5px; color: var(--ink-soft); }
       .howto p { margin: 0 0 8px; }
@@ -341,7 +357,8 @@
           </section>
 
           <section class="panel" aria-label="記録">
-            <h2>記録（このページを開いている間）</h2>
+            <h2>記録</h2>
+            <p class="storage-note">記録と設定はこの端末の中にだけ保存されます。外部のサーバーには送られません。別の端末や別のブラウザでは表示されません。</p>
             <div class="acc-grid">
               <div class="acc-box overall">
                 <div class="acc-name">全体の正解率（通算）</div>
@@ -362,6 +379,9 @@
             </div>
             <p class="empty-note" id="historyEmpty">まだ記録がありません。1回遊ぶと、ここに通算の正解率と履歴が出ます。</p>
             <ul class="history-list" id="historyList"></ul>
+            <div class="record-actions" id="recordActions" hidden>
+              <button type="button" class="btn-clear" id="btnClearAll">記録をすべて消す</button>
+            </div>
           </section>
 
           <section class="panel howto" aria-label="遊び方">
@@ -386,6 +406,45 @@
           { key: "col", name: "色" },
           { key: "shp", name: "形" }
         ];
+
+        /* ---------- on-device storage (localStorage) ----------
+           Records and settings live only in this browser on this device.
+           Nothing is sent to any server. If storage is unavailable
+           (private mode etc.), the app falls back to in-memory only. */
+        var STORE_KEY = "triple-nback-public-v1";
+        var storeOK = false;
+        try {
+          var probe = "__nback_probe__";
+          window.localStorage.setItem(probe, "1");
+          window.localStorage.removeItem(probe);
+          storeOK = true;
+        } catch (e) { storeOK = false; }
+
+        function loadStore() {
+          if (!storeOK) return null;
+          try {
+            var raw = window.localStorage.getItem(STORE_KEY);
+            return raw ? JSON.parse(raw) : null;
+          } catch (e) { return null; }
+        }
+        function saveStore() {
+          if (!storeOK) return;
+          try {
+            window.localStorage.setItem(STORE_KEY, JSON.stringify({
+              settings: {
+                n: currentN,
+                show: sliders.show.value,
+                gap: sliders.gap.value,
+                trials: sliders.trials.value,
+                match: sliders.match.value
+              },
+              games: sessionGames.map(function (g) {
+                return { n: g.n, total: g.total, at: g.at.getTime(), stats: g.stats };
+              })
+            }));
+          } catch (e) { /* storage full or blocked: keep playing in-memory */ }
+        }
+        var saved = loadStore();
 
         function shapeSVG(shapeIdx, colorIdx) {
           var fill = "hsl(" + colorIdx * 60 + ", 82%, 52%)";
@@ -437,6 +496,7 @@
         Object.keys(sliders).forEach(function (k) {
           sliders[k].addEventListener("input", function () {
             sliderVals[k].textContent = sliders[k].value;
+            saveStore();
           });
         });
 
@@ -446,8 +506,30 @@
           b.addEventListener("click", function () {
             currentN = parseInt(b.getAttribute("data-n"), 10);
             nBtns.forEach(function (x) { x.classList.toggle("selected", x === b); });
+            var note = document.querySelector(".n-note");
+            if (note) note.textContent = "「" + currentN + "つ前」と比べます";
+            saveStore();
           });
         });
+
+        /* restore saved settings, if any */
+        if (saved && saved.settings) {
+          var st = saved.settings;
+          ["show", "gap", "trials", "match"].forEach(function (k) {
+            if (st[k] !== undefined && st[k] !== null) {
+              sliders[k].value = st[k];
+              sliderVals[k].textContent = sliders[k].value;
+            }
+          });
+          if (st.n === 1 || st.n === 2 || st.n === 3) {
+            currentN = st.n;
+            nBtns.forEach(function (x) {
+              x.classList.toggle("selected", parseInt(x.getAttribute("data-n"), 10) === currentN);
+            });
+            var note2 = document.querySelector(".n-note");
+            if (note2) note2.textContent = "「" + currentN + "つ前」と比べます";
+          }
+        }
 
         /* ---------- sequence generation ----------
            For each modality independently: pick exactly `matchCount` of the
@@ -611,7 +693,14 @@
         }
 
         /* ---------- results & session record ---------- */
-        var sessionGames = []; // in-memory only
+        var sessionGames = [];
+        if (saved && Array.isArray(saved.games)) {
+          saved.games.forEach(function (g) {
+            if (g && g.stats) {
+              sessionGames.push({ n: g.n, total: g.total, stats: g.stats, at: new Date(g.at) });
+            }
+          });
+        }
 
         function accOf(st) {
           var total = st.hit + st.miss + st.fa + st.cr;
@@ -644,6 +733,7 @@
           progressFill.style.width = "100%";
 
           sessionGames.push({ n: finished.n, total: finished.total, stats: finished.stats, at: new Date() });
+          saveStore();
           renderResults(finished.stats);
           renderRecord();
         }
@@ -675,24 +765,73 @@
           document.getElementById("totCol").textContent = fmt(accOf(stats.col));
           document.getElementById("totShp").textContent = fmt(accOf(stats.shp));
           document.getElementById("historyEmpty").hidden = sessionGames.length > 0;
+          document.getElementById("recordActions").hidden = sessionGames.length === 0;
           var list = document.getElementById("historyList");
           list.innerHTML = "";
           sessionGames.slice().reverse().forEach(function (g, revIdx) {
+            var realIdx = sessionGames.length - 1 - revIdx;
             var li = document.createElement("li");
             var left = document.createElement("span");
+            left.className = "h-main";
+            var mo = g.at.getMonth() + 1;
+            var dd = g.at.getDate();
             var hh = ("0" + g.at.getHours()).slice(-2);
             var mm = ("0" + g.at.getMinutes()).slice(-2);
-            left.innerHTML = '<span class="h-when">' + hh + ":" + mm + "</span>　" +
-              (sessionGames.length - revIdx) + "回目： n=" + g.n + "、" + g.total + "回表示";
+            left.innerHTML = '<span class="h-when">' + mo + "/" + dd + " " + hh + ":" + mm + "</span>　" +
+              (realIdx + 1) + "回目： n=" + g.n + "、" + g.total + "回表示";
             var right = document.createElement("span");
-            right.innerHTML = "全体 <b>" + fmt(overallAcc(g.stats)) + "%</b>";
+            right.className = "h-right";
+            var acc = document.createElement("span");
+            acc.innerHTML = "全体 <b>" + fmt(overallAcc(g.stats)) + "%</b>";
+            var del = document.createElement("button");
+            del.type = "button";
+            del.className = "h-del";
+            del.textContent = "消す";
+            del.setAttribute("aria-label", (realIdx + 1) + "回目の記録を消す");
+            del.addEventListener("click", function () {
+              if (!del.classList.contains("confirm")) {
+                del.classList.add("confirm");
+                del.textContent = "本当に消す";
+                setTimeout(function () {
+                  del.classList.remove("confirm");
+                  del.textContent = "消す";
+                }, 3000);
+                return;
+              }
+              sessionGames.splice(realIdx, 1);
+              saveStore();
+              renderRecord();
+            });
+            right.appendChild(acc);
+            right.appendChild(del);
             li.appendChild(left); li.appendChild(right);
             list.appendChild(li);
           });
         }
 
+        var btnClearAll = document.getElementById("btnClearAll");
+        btnClearAll.addEventListener("click", function () {
+          if (!btnClearAll.classList.contains("confirm")) {
+            btnClearAll.classList.add("confirm");
+            btnClearAll.textContent = "本当にすべて消しますか？";
+            setTimeout(function () {
+              btnClearAll.classList.remove("confirm");
+              btnClearAll.textContent = "記録をすべて消す";
+            }, 3000);
+            return;
+          }
+          sessionGames = [];
+          saveStore();
+          btnClearAll.classList.remove("confirm");
+          btnClearAll.textContent = "記録をすべて消す";
+          renderRecord();
+        });
+
         btnStart.addEventListener("click", startGame);
         btnStop.addEventListener("click", stopGame);
+
+        /* show any records restored from this device */
+        renderRecord();
       })();
     </script>
   </body>
