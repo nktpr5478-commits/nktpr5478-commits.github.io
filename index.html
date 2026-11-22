@@ -96,11 +96,12 @@
 
       /* ---- board ---- */
       .status-row {
-        display: flex; justify-content: space-between; align-items: baseline;
-        gap: 12px; margin-bottom: 12px; min-height: 28px;
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 12px; margin-bottom: 12px; height: 30px; min-height: 30px;
+        flex-wrap: nowrap; overflow: hidden;
       }
-      .status-main { font-weight: 900; font-size: 18px; }
-      .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; }
+      .status-main { font-weight: 900; font-size: 18px; white-space: nowrap; flex: 0 0 auto; }
+      .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
       .board {
         display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 8px;
         width: 100%; max-width: 400px; margin: 0 auto;
@@ -883,7 +884,7 @@
             cells[pos].classList.add("active");
             cells[pos].innerHTML = shapeSVG(g.seqs.shp.seq[i], g.seqs.col.seq[i]);
           }
-          statusMain.textContent = (i + 1) + "回目を表示中";
+          statusMain.textContent = (i + 1) + "回目";
           statusSub.textContent = "n = " + g.n + " ／ " + modNames(gameMods(g)) + " ／ 全" + g.total + "回";
           progressFill.style.width = ((i + 1) / g.total * 100) + "%";
         }
