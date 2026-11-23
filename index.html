@@ -850,8 +850,12 @@
             ansBtns[m.key].disabled = !(on && active);
           });
         }
+        var pressedTimers = {};
         function clearPressed() {
-          MODS.forEach(function (m) { ansBtns[m.key].classList.remove("pressed"); });
+          MODS.forEach(function (m) {
+            if (pressedTimers[m.key]) { clearTimeout(pressedTimers[m.key]); delete pressedTimers[m.key]; }
+            ansBtns[m.key].classList.remove("pressed");
+          });
         }
         function clearBoard() {
           cells.forEach(function (c) { c.classList.remove("active"); c.innerHTML = ""; });
@@ -864,6 +868,14 @@
           if (game.pressed[key]) return;
           game.pressed[key] = true;
           ansBtns[key].classList.add("pressed");
+          /* flash only: the highlight snaps off ~100ms after the press.
+             Scoring uses game.pressed above, so this visual timeout
+             does not affect judgement or game timing. */
+          if (pressedTimers[key]) clearTimeout(pressedTimers[key]);
+          pressedTimers[key] = setTimeout(function () {
+            ansBtns[key].classList.remove("pressed");
+            delete pressedTimers[key];
+          }, 100);
         }
         MODS.forEach(function (m) {
           ansBtns[m.key].addEventListener("click", function () { press(m.key); });
