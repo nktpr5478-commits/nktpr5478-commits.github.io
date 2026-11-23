@@ -205,6 +205,13 @@
       }
       .slider-scale { display: flex; justify-content: space-between; color: var(--ink-soft); font-size: 12px; margin-top: -6px; }
       .settings-note { color: var(--ink-soft); font-size: 13px; margin: 10px 0 0; }
+      .reset-actions { margin-top: 16px; }
+      .btn-reset {
+        background: var(--surface); color: var(--ink);
+        border: 1.5px solid var(--line); border-radius: 10px;
+        font-size: 15px; font-weight: 700; padding: 10px 16px; min-height: 48px; width: 100%;
+      }
+      .btn-reset.confirm { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
       fieldset { border: none; margin: 0; padding: 0; }
       fieldset:disabled { opacity: .55; }
 
@@ -393,9 +400,9 @@
               <div class="slider-block">
                 <div class="slider-head">
                   <label for="rngTrials">表示回数</label>
-                  <span class="slider-val"><span id="valTrials">23</span><span class="unit">回</span></span>
+                  <span class="slider-val"><span id="valTrials">12</span><span class="unit">回</span></span>
                 </div>
-                <input type="range" id="rngTrials" min="10" max="60" step="1" value="23" />
+                <input type="range" id="rngTrials" min="10" max="60" step="1" value="12" />
                 <div class="slider-scale"><span>10回</span><span>60回</span></div>
               </div>
 
@@ -409,6 +416,11 @@
               </div>
 
               <p class="settings-note">一致回数は、選んだ種類のそれぞれで、採点される回の中にちょうどその回数だけ「n個前と一致」が出る設定です。一致する場所は毎回ランダムに散らばります。</p>
+
+              <div class="reset-actions">
+                <button type="button" class="btn-reset" id="btnResetDefaults">デフォルトに戻す</button>
+              </div>
+              <p class="settings-note">設定だけを最初の状態（n=2、比べる種類は位置・色・形、盤面3×3、表示回数12回など）に戻します。記録は消えません。</p>
             </fieldset>
             </div>
           </section>
@@ -756,6 +768,52 @@
             saveStore();
           });
         });
+
+        /* ---------- reset settings to defaults ----------
+           Settings only: game records (history / accuracy) are kept.
+           Two-step confirm, same pattern as the record delete buttons.
+           The button sits inside the settings fieldset, which is
+           disabled while a game is running, so it cannot be pressed
+           mid-game. */
+        var btnResetDefaults = document.getElementById("btnResetDefaults");
+        function resetDefaults() {
+          currentN = 2;
+          nBtns.forEach(function (x) {
+            x.classList.toggle("selected", parseInt(x.getAttribute("data-n"), 10) === 2);
+          });
+          var nNoteEl = document.querySelector(".n-note");
+          if (nNoteEl) nNoteEl.textContent = "「2つ前」と比べます";
+          var defSliders = { show: 2500, gap: 500, trials: 12, match: 6 };
+          Object.keys(defSliders).forEach(function (k) {
+            sliders[k].value = defSliders[k];
+            sliderVals[k].textContent = sliders[k].value;
+          });
+          currentMods = { pos: true, col: true, shp: true };
+          kanaMode = false;
+          if (modWarn) modWarn.textContent = "";
+          currentGrid = 3;
+          if (rngGrid) rngGrid.value = "3";
+          updateGridLabel();
+          buildBoard(3);
+          applyModsUI();
+          saveStore();
+        }
+        if (btnResetDefaults) {
+          btnResetDefaults.addEventListener("click", function () {
+            if (!btnResetDefaults.classList.contains("confirm")) {
+              btnResetDefaults.classList.add("confirm");
+              btnResetDefaults.textContent = "本当に戻しますか？";
+              setTimeout(function () {
+                btnResetDefaults.classList.remove("confirm");
+                btnResetDefaults.textContent = "デフォルトに戻す";
+              }, 3000);
+              return;
+            }
+            resetDefaults();
+            btnResetDefaults.classList.remove("confirm");
+            btnResetDefaults.textContent = "デフォルトに戻す";
+          });
+        }
 
         /* restore saved settings, if any */
         if (saved && saved.settings) {
@@ -1165,5 +1223,3 @@
     </script>
   </body>
 </html>
-
-<!-- cell color: neutral gray -->
