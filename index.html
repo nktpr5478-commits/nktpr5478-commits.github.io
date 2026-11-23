@@ -546,6 +546,7 @@
           if (!storeOK) return;
           try {
             window.localStorage.setItem(STORE_KEY, JSON.stringify({
+              gridDefaultMigratedV1: true,
               settings: {
                 n: currentN,
                 grid: currentGrid,
@@ -563,6 +564,29 @@
           } catch (e) { /* storage full or blocked: keep playing in-memory */ }
         }
         var saved = loadStore();
+
+        /* One-time migration: the grid default changed to 3.
+           Browsers saved while the default was 4 still hold grid=4.
+           Only when the migrated flag is absent, force the saved
+           grid back to 3 once and stamp the flag. Records (games)
+           and every other setting are left untouched. Once the flag
+           exists we never overwrite again, so a later deliberate
+           choice of 4x4 / 5x5 is respected. New visitors have no
+           saved data and simply start from the built-in default 3;
+           saveStore() always writes the flag from now on. */
+        if (saved && !saved.gridDefaultMigratedV1) {
+          try {
+            if (saved.settings && typeof saved.settings === "object") {
+              saved.settings.grid = 3;
+            }
+            saved.gridDefaultMigratedV1 = true;
+            if (storeOK) {
+              window.localStorage.setItem(STORE_KEY, JSON.stringify(saved));
+            }
+          } catch (e) { /* if the write-back fails, the in-memory
+                          saved.settings.grid is already 3, and the
+                          next normal saveStore() will stamp the flag */ }
+        }
 
         function shapeSVG(shapeIdx, colorIdx) {
           var fill = "hsl(" + colorIdx * 60 + ", 82%, 52%)";
