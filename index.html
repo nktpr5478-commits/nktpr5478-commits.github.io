@@ -167,7 +167,9 @@
         background: var(--surface); color: var(--warn);
         border: 1.5px solid var(--warn); border-radius: 10px;
         font-size: 16px; font-weight: 700; padding: 10px; width: 100%;
+        margin-top: 16px;
       }
+      .col-side > .btn-start { box-shadow: var(--shadow); }
       [hidden] { display: none !important; }
 
       /* ---- settings ---- */
@@ -327,14 +329,12 @@
             </button>
           </div>
 
-          <div class="main-actions">
-            <button type="button" class="btn-start" id="btnStart">スタート</button>
-            <button type="button" class="btn-stop" id="btnStop" hidden>やめる</button>
-          </div>
+          <button type="button" class="btn-stop" id="btnStop" hidden>やめる</button>
         </section>
 
         <!-- side column -->
         <div class="col-side">
+          <button type="button" class="btn-start" id="btnStart">2バックを開始（約37秒）</button>
           <section class="panel" aria-label="設定">
             <button type="button" class="settings-toggle" id="btnSettings" aria-expanded="false" aria-controls="settingsBody">
               <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -809,10 +809,24 @@
             if (blk) blk.classList.toggle("is-off", !enabled);
           });
         }
+        /* Start button label: "{n}バックを開始（約{秒}秒）".
+           Seconds = 0.9s lead-in + trials x (show + gap), rounded. */
+        function updateStartLabel() {
+          if (!btnStart) return;
+          var trials = parseInt(sliders.trials.value, 10);
+          if (isNaN(trials)) trials = 12;
+          var showMs = parseInt(sliders.show.value, 10);
+          if (isNaN(showMs)) showMs = 0;
+          var gapMs = parseInt(sliders.gap.value, 10);
+          if (isNaN(gapMs)) gapMs = 0;
+          var sec = Math.round((900 + trials * (showMs + gapMs)) / 1000);
+          btnStart.textContent = currentN + "バックを開始（約" + sec + "秒）";
+        }
         Object.keys(sliders).forEach(function (k) {
           sliders[k].addEventListener("input", function () {
             sliderVals[k].textContent = sliders[k].value;
             if (k === "trials") updateMatchLimits();
+            if (k === "trials" || k === "show" || k === "gap") updateStartLabel();
             saveStore();
           });
         });
@@ -841,6 +855,7 @@
             var note = document.querySelector(".n-note");
             if (note) note.textContent = "「" + currentN + "つ前」と比べます";
             updateMatchLimits();
+            updateStartLabel();
             saveStore();
           });
         });
@@ -865,6 +880,7 @@
             sliderVals[k].textContent = sliders[k].value;
           });
           updateMatchLimits();
+          updateStartLabel();
           currentMods = { pos: true, col: true, shp: true };
           kanaMode = false;
           if (modWarn) modWarn.textContent = "";
@@ -936,6 +952,7 @@
         updateMatchLimits();
         applyModsUI();
         updateMatchEnabled();
+        updateStartLabel();
 
         /* ---------- sequence generation ----------
            For each modality independently: pick exactly `matchCount` of the
