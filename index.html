@@ -406,21 +406,48 @@
                 <div class="slider-scale"><span>10回</span><span>60回</span></div>
               </div>
 
-              <div class="slider-block">
+              <div class="slider-block" id="matchBlockPos">
                 <div class="slider-head">
-                  <label for="rngMatch">一致回数</label>
-                  <span class="slider-val"><span id="valMatch">6</span><span class="unit">回</span></span>
+                  <label for="rngMatchPos">位置の一致回数</label>
+                  <span class="slider-val"><span id="valMatchPos">3</span><span class="unit">回</span></span>
                 </div>
-                <input type="range" id="rngMatch" min="1" max="10" step="1" value="6" />
-                <div class="slider-scale"><span>1回</span><span>10回</span></div>
+                <input type="range" id="rngMatchPos" min="1" max="10" step="1" value="3" />
+                <div class="slider-scale"><span>1回</span><span class="match-scale-max">10回</span></div>
               </div>
 
-              <p class="settings-note">一致回数は、選んだ種類のそれぞれで、採点される回の中にちょうどその回数だけ「n個前と一致」が出る設定です。一致する場所は毎回ランダムに散らばります。</p>
+              <div class="slider-block" id="matchBlockCol">
+                <div class="slider-head">
+                  <label for="rngMatchCol">色の一致回数</label>
+                  <span class="slider-val"><span id="valMatchCol">3</span><span class="unit">回</span></span>
+                </div>
+                <input type="range" id="rngMatchCol" min="1" max="10" step="1" value="3" />
+                <div class="slider-scale"><span>1回</span><span class="match-scale-max">10回</span></div>
+              </div>
+
+              <div class="slider-block" id="matchBlockShp">
+                <div class="slider-head">
+                  <label for="rngMatchShp">形の一致回数</label>
+                  <span class="slider-val"><span id="valMatchShp">3</span><span class="unit">回</span></span>
+                </div>
+                <input type="range" id="rngMatchShp" min="1" max="10" step="1" value="3" />
+                <div class="slider-scale"><span>1回</span><span class="match-scale-max">10回</span></div>
+              </div>
+
+              <div class="slider-block" id="matchBlockKana">
+                <div class="slider-head">
+                  <label for="rngMatchKana">ひらがなの一致回数</label>
+                  <span class="slider-val"><span id="valMatchKana">3</span><span class="unit">回</span></span>
+                </div>
+                <input type="range" id="rngMatchKana" min="1" max="10" step="1" value="3" />
+                <div class="slider-scale"><span>1回</span><span class="match-scale-max">10回</span></div>
+              </div>
+
+              <p class="settings-note">一致回数は種類ごとに設定できます。採点される回の中に、ちょうどその回数だけ「n個前と一致」が出ます。一致する場所は毎回ランダムに散らばります。上限は「表示回数 − n」です（例：表示12回・n=2なら上限10回）。表示回数やnを変えると上限も変わり、上限を超えた分は自動で上限まで下がります。選んでいない種類のスライダーは操作できません。</p>
 
               <div class="reset-actions">
                 <button type="button" class="btn-reset" id="btnResetDefaults">デフォルトに戻す</button>
               </div>
-              <p class="settings-note">設定だけを最初の状態（n=2、比べる種類は位置・色・形、盤面3×3、表示回数12回など）に戻します。記録は消えません。</p>
+              <p class="settings-note">設定だけを最初の状態（n=2、比べる種類は位置・色・形、盤面3×3、表示回数12回、一致回数は位置・色・形・ひらがな各3回など）に戻します。記録は消えません。</p>
             </fieldset>
             </div>
           </section>
@@ -567,7 +594,11 @@
                 show: sliders.show.value,
                 gap: sliders.gap.value,
                 trials: sliders.trials.value,
-                match: sliders.match.value
+                matchPos: sliders.matchPos.value,
+                matchCol: sliders.matchCol.value,
+                matchShp: sliders.matchShp.value,
+                matchKana: sliders.matchKana.value,
+                match: sliders.matchPos.value
               },
               games: sessionGames.map(function (g) {
                 return { n: g.n, grid: g.grid, mods: gameMods(g), total: g.total, at: g.at.getTime(), stats: g.stats };
@@ -700,6 +731,7 @@
             else if (active.length === 2) headerSub.textContent = modNames(active) + "の2つを同時に覚える、ダブルnバックです。";
             else headerSub.textContent = modNames(active) + "だけを覚える、シングルnバックです。";
           }
+          if (typeof updateMatchEnabled === "function") { try { updateMatchEnabled(); } catch (e) {} }
           if (typeof renderRecord === "function") { try { renderRecord(); } catch (e) {} }
         }
         modToggleBtns.forEach(function (b) {
@@ -727,17 +759,60 @@
           show: document.getElementById("rngShow"),
           gap: document.getElementById("rngGap"),
           trials: document.getElementById("rngTrials"),
-          match: document.getElementById("rngMatch")
+          matchPos: document.getElementById("rngMatchPos"),
+          matchCol: document.getElementById("rngMatchCol"),
+          matchShp: document.getElementById("rngMatchShp"),
+          matchKana: document.getElementById("rngMatchKana")
         };
         var sliderVals = {
           show: document.getElementById("valShow"),
           gap: document.getElementById("valGap"),
           trials: document.getElementById("valTrials"),
-          match: document.getElementById("valMatch")
+          matchPos: document.getElementById("valMatchPos"),
+          matchCol: document.getElementById("valMatchCol"),
+          matchShp: document.getElementById("valMatchShp"),
+          matchKana: document.getElementById("valMatchKana")
         };
+        var MATCH_KEYS = ["matchPos", "matchCol", "matchShp", "matchKana"];
+        function maxMatchCount() {
+          var t = parseInt(sliders.trials.value, 10) || 12;
+          var m = t - currentN;
+          return Math.max(1, m);
+        }
+        function updateMatchLimits() {
+          var max = maxMatchCount();
+          MATCH_KEYS.forEach(function (k) {
+            if (!sliders[k]) return;
+            sliders[k].max = String(max);
+            if (parseInt(sliders[k].value, 10) > max) {
+              sliders[k].value = String(max);
+            }
+            sliderVals[k].textContent = sliders[k].value;
+          });
+          document.querySelectorAll(".match-scale-max").forEach(function (el) {
+            el.textContent = max + "回";
+          });
+        }
+        function updateMatchEnabled() {
+          var map = [
+            { key: "matchPos", block: "matchBlockPos", mod: "pos" },
+            { key: "matchCol", block: "matchBlockCol", mod: "col" },
+            { key: "matchShp", block: "matchBlockShp", mod: "shp" },
+            { key: "matchKana", block: "matchBlockKana", mod: "kana" }
+          ];
+          map.forEach(function (item) {
+            var enabled;
+            if (item.mod === "kana") enabled = kanaMode;
+            else enabled = !kanaMode && !!currentMods[item.mod];
+            if (sliders[item.key]) sliders[item.key].disabled = !enabled;
+            var blk = document.getElementById(item.block);
+            if (blk) blk.classList.toggle("is-off", !enabled);
+          });
+        }
         Object.keys(sliders).forEach(function (k) {
           sliders[k].addEventListener("input", function () {
             sliderVals[k].textContent = sliders[k].value;
+            if (k === "trials") updateMatchLimits();
             saveStore();
           });
         });
@@ -765,6 +840,7 @@
             nBtns.forEach(function (x) { x.classList.toggle("selected", x === b); });
             var note = document.querySelector(".n-note");
             if (note) note.textContent = "「" + currentN + "つ前」と比べます";
+            updateMatchLimits();
             saveStore();
           });
         });
@@ -783,11 +859,12 @@
           });
           var nNoteEl = document.querySelector(".n-note");
           if (nNoteEl) nNoteEl.textContent = "「2つ前」と比べます";
-          var defSliders = { show: 2500, gap: 500, trials: 12, match: 6 };
+          var defSliders = { show: 2500, gap: 500, trials: 12, matchPos: 3, matchCol: 3, matchShp: 3, matchKana: 3 };
           Object.keys(defSliders).forEach(function (k) {
             sliders[k].value = defSliders[k];
             sliderVals[k].textContent = sliders[k].value;
           });
+          updateMatchLimits();
           currentMods = { pos: true, col: true, shp: true };
           kanaMode = false;
           if (modWarn) modWarn.textContent = "";
@@ -818,9 +895,18 @@
         /* restore saved settings, if any */
         if (saved && saved.settings) {
           var st = saved.settings;
-          ["show", "gap", "trials", "match"].forEach(function (k) {
+          ["show", "gap", "trials"].forEach(function (k) {
             if (st[k] !== undefined && st[k] !== null) {
               sliders[k].value = st[k];
+              sliderVals[k].textContent = sliders[k].value;
+            }
+          });
+          /* Migration: old single `match` value seeds each per-type
+             slider when no per-type value was saved yet. */
+          MATCH_KEYS.forEach(function (k) {
+            var v = (st[k] !== undefined && st[k] !== null) ? st[k] : st.match;
+            if (v !== undefined && v !== null) {
+              sliders[k].value = v;
               sliderVals[k].textContent = sliders[k].value;
             }
           });
@@ -847,7 +933,9 @@
           }
           if (st.kana === true) kanaMode = true;
         }
+        updateMatchLimits();
         applyModsUI();
+        updateMatchEnabled();
 
         /* ---------- sequence generation ----------
            For each modality independently: pick exactly `matchCount` of the
@@ -1009,18 +1097,25 @@
           var total = parseInt(sliders.trials.value, 10);
           var showMs = parseInt(sliders.show.value, 10);
           var gapMs = parseInt(sliders.gap.value, 10);
-          var wantMatch = parseInt(sliders.match.value, 10);
           var scored = total - currentN;
-          var matchCount = Math.min(wantMatch, scored);
+          function mc(slider) {
+            var v = parseInt(slider.value, 10);
+            if (isNaN(v)) v = 3;
+            return Math.max(1, Math.min(v, scored));
+          }
+          var matchPos = mc(sliders.matchPos);
+          var matchCol = mc(sliders.matchCol);
+          var matchShp = mc(sliders.matchShp);
+          var matchKana = mc(sliders.matchKana);
           game = {
             n: currentN, grid: currentGrid, mods: active.slice(), total: total, showMs: showMs, gapMs: gapMs,
             idx: 0, pressed: { pos: false, col: false, shp: false, kana: false },
             stats: newStats(),
             seqs: {
-              pos: active.indexOf("pos") >= 0 ? genModality(total, currentN, matchCount, currentGrid * currentGrid) : genRandomSeq(total, currentGrid * currentGrid),
-              col: active.indexOf("col") >= 0 ? genModality(total, currentN, matchCount, 6) : genRandomSeq(total, 6),
-              shp: active.indexOf("shp") >= 0 ? genModality(total, currentN, matchCount, 6) : genRandomSeq(total, 6),
-              kana: active.indexOf("kana") >= 0 ? genModality(total, currentN, matchCount, KANA.length) : genRandomSeq(total, KANA.length)
+              pos: active.indexOf("pos") >= 0 ? genModality(total, currentN, matchPos, currentGrid * currentGrid) : genRandomSeq(total, currentGrid * currentGrid),
+              col: active.indexOf("col") >= 0 ? genModality(total, currentN, matchCol, 6) : genRandomSeq(total, 6),
+              shp: active.indexOf("shp") >= 0 ? genModality(total, currentN, matchShp, 6) : genRandomSeq(total, 6),
+              kana: active.indexOf("kana") >= 0 ? genModality(total, currentN, matchKana, KANA.length) : genRandomSeq(total, KANA.length)
             }
           };
           playing = true;
