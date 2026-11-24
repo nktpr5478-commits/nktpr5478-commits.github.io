@@ -117,16 +117,20 @@
       .status-main { font-weight: 900; font-size: 18px; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
       .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
-      /* ---- mixed-n instruction badge ---- */
-      .n-badge { text-align: center; margin-bottom: 12px; }
-      .n-badge .pill {
-        display: inline-flex; align-items: baseline; gap: 9px;
-        background: var(--accent); color: var(--accent-ink);
-        border-radius: 999px; padding: 6px 24px;
-        font-weight: 900;
+      /* ---- mixed-n instruction number ----
+         Just one large digit, directly above the board so it stays in
+         view while watching the stimulus. The area always keeps its
+         fixed height (visibility, not display, toggles the digit), so
+         the board never shifts up or down when a number appears. */
+      .n-badge {
+        text-align: center; height: 64px; line-height: 64px;
+        margin-bottom: 8px; color: var(--ink);
       }
-      .n-badge .n-badge-label { font-size: 14px; opacity: .85; }
-      .n-badge .n-badge-num { font-size: 27px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+      .n-badge[hidden] { display: block !important; visibility: hidden; }
+      .n-badge .n-badge-num {
+        font-size: 56px; font-weight: 900; line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
       .board {
         display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 8px;
         width: 100%; max-width: 400px; margin: 0 auto;
@@ -338,7 +342,7 @@
             <span class="status-sub" id="statusSub"></span>
           </div>
 
-          <div class="n-badge" id="nBadge" hidden><span class="pill"><span class="n-badge-label">指示</span><span class="n-badge-num" id="nBadgeNum">2バック</span></span></div>
+          <div class="n-badge" id="nBadge" hidden aria-label="何個前と比べるか"><span class="n-badge-num" id="nBadgeNum">2</span></div>
 
           <div class="board cols-3" id="board" style="--cols: 3" aria-label="3かける3の盤面"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
 
@@ -1272,7 +1276,7 @@
                hides the badge during the gap phase, so it remains
                visible until the next trial replaces it. */
             nBadge.hidden = false;
-            nBadgeNum.textContent = g.backs[i] + "バック";
+            nBadgeNum.textContent = String(g.backs[i]);
             statusSub.textContent = "n混在（1〜" + g.n + "）／ " + modNames(gameMods(g)) + " ／ 全" + g.total + "回";
           } else {
             nBadge.hidden = true;
