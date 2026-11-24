@@ -1052,15 +1052,15 @@
           if (game.pressed[key]) return;
           game.pressed[key] = true;
           ansBtns[key].classList.add("pressed");
-          /* Keep the highlight on until this trial ends (clearPressed()
-             runs when the next trial is shown, and endPlay() clears it
-             when the game stops or finishes). Scoring uses game.pressed
-             above, so the display never affects judgement. Keeping it
-             visible lets the player confirm at a glance that each press
-             — including the second of two near-simultaneous presses —
-             was actually registered, instead of a ~100ms flash that is
-             easy to miss and invites a re-press. */
+          /* Flash only: remove the highlight after ~100ms so the
+             button returns to its normal look right away. Scoring
+             uses game.pressed above, so the display timing never
+             affects judgement. */
           if (pressedTimers[key]) { clearTimeout(pressedTimers[key]); delete pressedTimers[key]; }
+          pressedTimers[key] = setTimeout(function () {
+            ansBtns[key].classList.remove("pressed");
+            delete pressedTimers[key];
+          }, 100);
         }
         MODS.forEach(function (m) {
           /* Register on pointerdown (the moment the finger touches),
