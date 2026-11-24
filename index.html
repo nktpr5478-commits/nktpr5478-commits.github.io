@@ -1050,16 +1050,33 @@
           if (game.pressed[key]) return;
           game.pressed[key] = true;
           ansBtns[key].classList.add("pressed");
-          /* flash only: the highlight snaps off ~100ms after the press.
-             Scoring uses game.pressed above, so this visual timeout
-             does not affect judgement or game timing. */
-          if (pressedTimers[key]) clearTimeout(pressedTimers[key]);
-          pressedTimers[key] = setTimeout(function () {
-            ansBtns[key].classList.remove("pressed");
-            delete pressedTimers[key];
-          }, 100);
+          /* Keep the highlight on until this trial ends (clearPressed()
+             runs when the next trial is shown, and endPlay() clears it
+             when the game stops or finishes). Scoring uses game.pressed
+             above, so the display never affects judgement. Keeping it
+             visible lets the player confirm at a glance that each press
+             — including the second of two near-simultaneous presses —
+             was actually registered, instead of a ~100ms flash that is
+             easy to miss and invites a re-press. */
+          if (pressedTimers[key]) { clearTimeout(pressedTimers[key]); delete pressedTimers[key]; }
         }
         MODS.forEach(function (m) {
+          /* Register on pointerdown (the moment the finger touches),
+             not only on click (which fires when the finger lifts).
+             With two fingers pressing two buttons at nearly the same
+             time, the click for one button can be lost or land after
+             the stimulus has already advanced; pointerdown fires per
+             touch, immediately, for each button independently, so a
+             simultaneous position + colour press records both.
+             The click listener stays as a fallback for environments
+             without pointer events (and for synthetic clicks); the
+             guard at the top of press() makes the follow-up click a
+             no-op when pointerdown already recorded the press, so a
+             press is never counted twice and never toggled off. */
+          ansBtns[m.key].addEventListener("pointerdown", function (e) {
+            if (e && e.preventDefault) e.preventDefault();
+            press(m.key);
+          });
           ansBtns[m.key].addEventListener("click", function () { press(m.key); });
         });
         document.addEventListener("keydown", function (e) {
