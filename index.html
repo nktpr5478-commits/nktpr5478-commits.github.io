@@ -116,6 +116,17 @@
       }
       .status-main { font-weight: 900; font-size: 18px; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
       .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+      /* ---- mixed-n instruction badge ---- */
+      .n-badge { text-align: center; margin-bottom: 12px; }
+      .n-badge .pill {
+        display: inline-flex; align-items: baseline; gap: 9px;
+        background: var(--accent); color: var(--accent-ink);
+        border-radius: 999px; padding: 6px 24px;
+        font-weight: 900;
+      }
+      .n-badge .n-badge-label { font-size: 14px; opacity: .85; }
+      .n-badge .n-badge-num { font-size: 27px; line-height: 1.25; font-variant-numeric: tabular-nums; }
       .board {
         display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 8px;
         width: 100%; max-width: 400px; margin: 0 auto;
@@ -327,6 +338,8 @@
             <span class="status-sub" id="statusSub"></span>
           </div>
 
+          <div class="n-badge" id="nBadge" hidden><span class="pill"><span class="n-badge-label">指示</span><span class="n-badge-num" id="nBadgeNum">2バック</span></span></div>
+
           <div class="board cols-3" id="board" style="--cols: 3" aria-label="3かける3の盤面"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
 
           <div class="kana-stage" id="kanaStage" hidden aria-label="ひらがなの表示">
@@ -395,6 +408,14 @@
                   <button type="button" data-n="5">5</button>
                 </div>
                 <span class="n-note">「2つ前」と比べます</span>
+              </div>
+
+              <div class="mod-row">
+                <span class="mod-label" id="mixLabel">nを混ぜる</span>
+                <div class="mod-seg" role="group" aria-labelledby="mixLabel">
+                  <button type="button" id="btnMixMode" aria-pressed="false"><span class="mod-check" aria-hidden="true"></span>nを混ぜる（指示に従う）</button>
+                </div>
+                <div class="mod-note">オンにすると、1回のゲームの中で試行ごとに「指示」が出て、その数だけ前と比べます。指示の数字は1〜nの間でランダムに出ます。オフのときは、最初から最後までnで固定です。</div>
               </div>
 
               <div class="slider-block" id="gridBlock">
@@ -483,7 +504,7 @@
               <div class="reset-actions">
                 <button type="button" class="btn-reset" id="btnResetDefaults">デフォルトに戻す</button>
               </div>
-              <p class="settings-note">設定だけを最初の状態（n=2、比べる種類は位置・色・形、盤面3×3、表示回数12回、一致回数は位置・色・形・音声・ひらがな各3回、音声はオフなど）に戻します。記録は消えません。</p>
+              <p class="settings-note">設定だけを最初の状態（n=2、比べる種類は位置・色・形、nを混ぜるはオフ、盤面3×3、表示回数12回、一致回数は位置・色・形・音声・ひらがな各3回、音声はオフなど）に戻します。記録は消えません。</p>
             </fieldset>
             </div>
           </section>
@@ -562,6 +583,7 @@
             <p>色は あか・きいろ・みどり・みずいろ・あお・むらさき の6色、形は まる・しかく・さんかく・ひしがた・ほし・ろっかく の6種類です。盤面の大きさは設定で 2×2・3×3・4×4・5×5 から選べます。</p>
             <p>設定で<b>音声</b>を選ぶと、図形が表示されるのと同時に、五十音の音が1つ読み上げられます。n個前と同じ音が聞こえたら<b>「音声」ボタン（Fキー）</b>を押してください。音が出るので、音量に気をつけてください。</p>
             <p>設定の<b>ひらがなモード</b>にチェックを付けると、五十音の文字が1つずつ大きく中央に表示される、ひらがなだけのnバックになります。このとき位置・色・形は使いません。n個前と同じ文字が出たら<b>「ひらがな」ボタン（Aキー）</b>を押してください。</p>
+            <p>設定の<b>「nを混ぜる（指示に従う）」</b>をオンにすると、1回のゲームの中で試行ごとに<b>指示</b>（「1バック」「2バック」など）が画面に出て、その数だけ前と比べるようになります。指示の数字は1からnのあいだでランダムに出るので、毎回ちがう数だけ前を思い出す必要があります。オフのときは、最初から最後までnで固定です。</p>
           </section>
         </div>
       </div>
@@ -586,6 +608,11 @@
         var ALL_MOD_KEYS = ["pos", "col", "shp", "voice", "kana"];
         var currentMods = { pos: true, col: true, shp: true, voice: false };
         var kanaMode = false;
+        /* Mixed-n mode ("nを混ぜる"): when on, each trial carries its own
+           instruction number (1..n, uniform random) and is compared that
+           many trials back. Default off; games then run at fixed n from
+           start to finish, exactly as before. */
+        var mixN = false;
         function activeModKeys() {
           return ALL_MOD_KEYS.filter(function (k) { return !!currentMods[k]; });
         }
@@ -634,6 +661,7 @@
               gridDefaultMigratedV1: true,
               settings: {
                 n: currentN,
+                mixN: mixN,
                 grid: currentGrid,
                 mods: activeModKeys(),
                 kana: kanaMode,
@@ -648,7 +676,7 @@
                 match: sliders.matchPos.value
               },
               games: sessionGames.map(function (g) {
-                return { n: g.n, grid: g.grid, mods: gameMods(g), total: g.total, at: g.at.getTime(), stats: g.stats };
+                return { n: g.n, mixed: !!g.mixed, grid: g.grid, mods: gameMods(g), total: g.total, at: g.at.getTime(), stats: g.stats };
               })
             }));
           } catch (e) { /* storage full or blocked: keep playing in-memory */ }
@@ -713,6 +741,8 @@
         buildBoard(currentGrid);
         var statusMain = document.getElementById("statusMain");
         var statusSub = document.getElementById("statusSub");
+        var nBadge = document.getElementById("nBadge");
+        var nBadgeNum = document.getElementById("nBadgeNum");
         var progressFill = document.getElementById("progressFill");
         var btnStart = document.getElementById("btnStart");
         var btnStop = document.getElementById("btnStop");
@@ -872,7 +902,11 @@
           var gapMs = parseInt(sliders.gap.value, 10);
           if (isNaN(gapMs)) gapMs = 0;
           var sec = Math.round((900 + trials * (showMs + gapMs)) / 1000);
-          btnStart.textContent = currentN + "バックを開始（約" + sec + "秒）";
+          if (mixN) {
+            btnStart.textContent = "開始（1〜" + currentN + "バック混在・約" + sec + "秒）";
+          } else {
+            btnStart.textContent = currentN + "バックを開始（約" + sec + "秒）";
+          }
         }
         Object.keys(sliders).forEach(function (k) {
           sliders[k].addEventListener("input", function () {
@@ -912,6 +946,25 @@
           });
         });
 
+        /* ---------- mixed-n toggle ("nを混ぜる") ---------- */
+        var btnMixMode = document.getElementById("btnMixMode");
+        function applyMixUI() {
+          if (btnMixMode) {
+            btnMixMode.classList.toggle("selected", mixN);
+            btnMixMode.setAttribute("aria-pressed", mixN ? "true" : "false");
+            var mchk = btnMixMode.querySelector(".mod-check");
+            if (mchk) mchk.textContent = mixN ? "✓" : "";
+          }
+          updateStartLabel();
+        }
+        if (btnMixMode) {
+          btnMixMode.addEventListener("click", function () {
+            mixN = !mixN;
+            applyMixUI();
+            saveStore();
+          });
+        }
+
         /* ---------- reset settings to defaults ----------
            Settings only: game records (history / accuracy) are kept.
            Two-step confirm, same pattern as the record delete buttons.
@@ -921,6 +974,7 @@
         var btnResetDefaults = document.getElementById("btnResetDefaults");
         function resetDefaults() {
           currentN = 2;
+          mixN = false;
           nBtns.forEach(function (x) {
             x.classList.toggle("selected", parseInt(x.getAttribute("data-n"), 10) === 2);
           });
@@ -940,6 +994,7 @@
           if (rngGrid) rngGrid.value = "3";
           updateGridLabel();
           buildBoard(3);
+          applyMixUI();
           applyModsUI();
           saveStore();
         }
@@ -1002,9 +1057,13 @@
             }
           }
           if (st.kana === true) kanaMode = true;
+          /* Saves written before the mixed-n feature have no mixN
+             field; they read as off, which is the default. */
+          if (st.mixN === true) mixN = true;
         }
         updateMatchLimits();
         applyModsUI();
+        applyMixUI();
         updateMatchEnabled();
         updateStartLabel();
 
@@ -1033,6 +1092,33 @@
               var v;
               do { v = Math.floor(Math.random() * valueCount); }
               while (k >= n && v === seq[k - n]);
+              seq[k] = v;
+            }
+          }
+          return { seq: seq, matchSet: matchSet };
+        }
+        /* Mixed-n variant: `backs[k]` is trial k's instruction number
+           (1..nMax). Scored positions are still index >= nMax (the
+           first nMax trials are warm-up, as usual). Exactly matchCount
+           of the scored positions copy the value backs[k] trials back;
+           every other position is guaranteed to differ from the value
+           backs[k] trials back, so each trial is judged against its
+           own instruction distance only. */
+        function genModalityVar(total, nMax, backs, matchCount, valueCount) {
+          var scoredIdx = [];
+          for (var i = nMax; i < total; i++) scoredIdx.push(i);
+          shuffle(scoredIdx);
+          var matchSet = {};
+          scoredIdx.slice(0, matchCount).forEach(function (idx) { matchSet[idx] = true; });
+          var seq = new Array(total);
+          for (var k = 0; k < total; k++) {
+            var d = backs[k];
+            if (k >= nMax && matchSet[k]) {
+              seq[k] = seq[k - d];
+            } else {
+              var v;
+              do { v = Math.floor(Math.random() * valueCount); }
+              while (k >= d && v === seq[k - d]);
               seq[k] = v;
             }
           }
@@ -1180,7 +1266,18 @@
             speakVoice(g.seqs.voice.seq[i]);
           }
           statusMain.textContent = (i + 1) + "回目";
-          statusSub.textContent = "n = " + g.n + " ／ " + modNames(gameMods(g)) + " ／ 全" + g.total + "回";
+          if (g.mixed && g.backs) {
+            /* The instruction badge stays up for the whole trial —
+               showTrial runs at the start of the trial and nothing
+               hides the badge during the gap phase, so it remains
+               visible until the next trial replaces it. */
+            nBadge.hidden = false;
+            nBadgeNum.textContent = g.backs[i] + "バック";
+            statusSub.textContent = "n混在（1〜" + g.n + "）／ " + modNames(gameMods(g)) + " ／ 全" + g.total + "回";
+          } else {
+            nBadge.hidden = true;
+            statusSub.textContent = "n = " + g.n + " ／ " + modNames(gameMods(g)) + " ／ 全" + g.total + "回";
+          }
           progressFill.style.width = ((i + 1) / g.total * 100) + "%";
         }
 
@@ -1221,16 +1318,28 @@
           var matchShp = mc(sliders.matchShp);
           var matchVoice = mc(sliders.matchVoice);
           var matchKana = mc(sliders.matchKana);
+          /* Mixed-n: one instruction number per trial, uniform random
+             in 1..currentN. Null when off (fixed-n game, as before). */
+          var backs = null;
+          if (mixN) {
+            backs = [];
+            for (var bi = 0; bi < total; bi++) backs.push(1 + Math.floor(Math.random() * currentN));
+          }
+          function genFor(isActive, matchCount, valueCount) {
+            if (!isActive) return genRandomSeq(total, valueCount);
+            if (mixN) return genModalityVar(total, currentN, backs, matchCount, valueCount);
+            return genModality(total, currentN, matchCount, valueCount);
+          }
           game = {
-            n: currentN, grid: currentGrid, mods: active.slice(), total: total, showMs: showMs, gapMs: gapMs,
+            n: currentN, mixed: mixN, backs: backs, grid: currentGrid, mods: active.slice(), total: total, showMs: showMs, gapMs: gapMs,
             idx: 0, pressed: { pos: false, col: false, shp: false, voice: false, kana: false },
             stats: newStats(),
             seqs: {
-              pos: active.indexOf("pos") >= 0 ? genModality(total, currentN, matchPos, currentGrid * currentGrid) : genRandomSeq(total, currentGrid * currentGrid),
-              col: active.indexOf("col") >= 0 ? genModality(total, currentN, matchCol, 6) : genRandomSeq(total, 6),
-              shp: active.indexOf("shp") >= 0 ? genModality(total, currentN, matchShp, 6) : genRandomSeq(total, 6),
-              voice: active.indexOf("voice") >= 0 ? genModality(total, currentN, matchVoice, KANA.length) : genRandomSeq(total, KANA.length),
-              kana: active.indexOf("kana") >= 0 ? genModality(total, currentN, matchKana, KANA.length) : genRandomSeq(total, KANA.length)
+              pos: genFor(active.indexOf("pos") >= 0, matchPos, currentGrid * currentGrid),
+              col: genFor(active.indexOf("col") >= 0, matchCol, 6),
+              shp: genFor(active.indexOf("shp") >= 0, matchShp, 6),
+              voice: genFor(active.indexOf("voice") >= 0, matchVoice, KANA.length),
+              kana: genFor(active.indexOf("kana") >= 0, matchKana, KANA.length)
             }
           };
           playing = true;
@@ -1241,7 +1350,9 @@
           btnStop.hidden = false;
           setAnswersEnabled(true);
           statusMain.textContent = "まもなく始まります";
-          statusSub.textContent = "n = " + currentN + " ／ 全" + total + "回";
+          statusSub.textContent = mixN
+            ? "n混在（1〜" + currentN + "）／ 全" + total + "回"
+            : "n = " + currentN + " ／ 全" + total + "回";
           progressFill.style.width = "0%";
           later(runTrial, 900);
         }
@@ -1252,6 +1363,7 @@
           stopSpeech();
           clearBoard();
           clearPressed();
+          nBadge.hidden = true;
           setAnswersEnabled(false);
           fieldset.disabled = false;
           btnSettings.disabled = false;
@@ -1271,7 +1383,7 @@
         if (saved && Array.isArray(saved.games)) {
           saved.games.forEach(function (g) {
             if (g && g.stats) {
-              sessionGames.push({ n: g.n, grid: g.grid, mods: gameMods(g), total: g.total, stats: g.stats, at: new Date(g.at) });
+              sessionGames.push({ n: g.n, mixed: !!g.mixed, grid: g.grid, mods: gameMods(g), total: g.total, stats: g.stats, at: new Date(g.at) });
             }
           });
         }
@@ -1315,7 +1427,7 @@
           statusSub.textContent = "";
           progressFill.style.width = "100%";
 
-          sessionGames.push({ n: finished.n, grid: finished.grid, mods: gameMods(finished), total: finished.total, stats: finished.stats, at: new Date() });
+          sessionGames.push({ n: finished.n, mixed: !!finished.mixed, grid: finished.grid, mods: gameMods(finished), total: finished.total, stats: finished.stats, at: new Date() });
           saveStore();
           renderResults(finished.stats, gameMods(finished));
           renderRecord();
@@ -1375,7 +1487,8 @@
             var mm = ("0" + g.at.getMinutes()).slice(-2);
             var gGrid = (g.grid === 2 || g.grid === 3 || g.grid === 4 || g.grid === 5) ? g.grid : 4;
             var gMods = gameMods(g);
-            var desc = (realIdx + 1) + "回目： n=" + g.n + "、" + modNames(gMods);
+            var nDesc = g.mixed ? ("n混在（1〜" + g.n + "）") : ("n=" + g.n);
+            var desc = (realIdx + 1) + "回目： " + nDesc + "、" + modNames(gMods);
             if (gMods.indexOf("kana") < 0) desc += "、盤面" + gGrid + "×" + gGrid;
             desc += "、" + g.total + "回表示";
             left.innerHTML = '<span class="h-when">' + mo + "/" + dd + " " + hh + ":" + mm + "</span>　" + desc;
