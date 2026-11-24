@@ -49,7 +49,7 @@
         }
       }
       * { box-sizing: border-box; }
-      html { -webkit-text-size-adjust: 100%; }
+      html { -webkit-text-size-adjust: 100%; overflow-x: hidden; overflow-x: clip; }
       body {
         margin: 0;
         background: var(--bg);
@@ -57,6 +57,13 @@
         font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
         font-size: 16px;
         line-height: 1.6;
+        /* Keep the page from ever growing sideways or bouncing at the
+           edges while playing: no horizontal overflow, no overscroll
+           chaining, and no double-tap zoom on taps. */
+        overflow-x: hidden;
+        overflow-x: clip;
+        overscroll-behavior: none;
+        touch-action: manipulation;
       }
       button, input { font: inherit; }
       button { min-height: 44px; cursor: pointer; }
@@ -71,6 +78,11 @@
       header.top p { margin: 0; color: var(--ink-soft); font-size: 15px; }
 
       .layout { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+      /* Grid items must be allowed to shrink below their content's
+         min-content size; otherwise wide content inside a panel (the
+         status line, a shown stimulus) can force the column wider
+         than the screen while a game is running. */
+      .layout > *, .col-side > * { min-width: 0; }
       .col-side { display: grid; gap: 20px; }
 
       .panel {
@@ -101,10 +113,10 @@
         gap: 12px; margin-bottom: 12px; height: 30px; min-height: 30px;
         flex-wrap: nowrap; overflow: hidden;
       }
-      .status-main { font-weight: 900; font-size: 18px; white-space: nowrap; flex: 0 0 auto; }
+      .status-main { font-weight: 900; font-size: 18px; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
       .status-sub { color: var(--ink-soft); font-size: 14px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
       .board {
-        display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 8px;
+        display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 8px;
         width: 100%; max-width: 400px; margin: 0 auto;
       }
       .board.cols-5 { gap: 6px; }
@@ -113,6 +125,8 @@
       .board.cols-2 .cell { border-radius: 10px; }
       .cell {
         aspect-ratio: 1 / 1;
+        min-width: 0;
+        overflow: hidden;
         background: var(--cell);
         border: 2px solid var(--cell-line);
         border-radius: 8px;
@@ -134,7 +148,7 @@
       .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; transition: width .2s linear; }
 
       /* ---- answer buttons ---- */
-      .answers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+      .answers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
       .ans-btn {
         border: 2px solid var(--line);
         background: var(--surface);
@@ -162,6 +176,8 @@
         border: none; border-radius: 10px;
         font-size: 19px; font-weight: 900; padding: 14px;
         min-height: 56px; width: 100%;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
       .btn-start:active { background: var(--accent-strong); }
       .btn-stop {
@@ -169,6 +185,8 @@
         border: 1.5px solid var(--warn); border-radius: 10px;
         font-size: 16px; font-weight: 700; padding: 10px; width: 100%;
         margin-top: 16px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
       .col-side > .btn-start { box-shadow: var(--shadow); }
       [hidden] { display: none !important; }
@@ -219,7 +237,7 @@
       fieldset:disabled { opacity: .55; }
 
       /* ---- results & record ---- */
-      .acc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+      .acc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
       .acc-box { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; }
       .acc-box .acc-name { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
       .acc-box .acc-num { font-size: 34px; font-weight: 900; line-height: 1.15; font-variant-numeric: tabular-nums; }
@@ -245,7 +263,7 @@
       }
       .history-list li:first-child { border-top: none; padding-top: 2px; }
       .history-list .h-when { color: var(--ink-soft); }
-      .history-list .h-main { flex: 1 1 auto; }
+      .history-list .h-main { flex: 1 1 auto; min-width: 0; }
       .history-list .h-right { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
       .h-del {
         min-height: 36px; padding: 4px 10px; font-size: 13px; font-weight: 700;
@@ -723,7 +741,7 @@
             else ansBtns[m.key].hidden = kanaMode || !currentMods[m.key];
           });
           var shown = kanaMode ? 1 : Math.max(1, active.length);
-          if (answersRow) answersRow.style.gridTemplateColumns = "repeat(" + shown + ", 1fr)";
+          if (answersRow) answersRow.style.gridTemplateColumns = "repeat(" + shown + ", minmax(0, 1fr))";
           if (boardEl) boardEl.hidden = kanaMode;
           if (kanaStage) kanaStage.hidden = !kanaMode;
           if (headerSub) {
