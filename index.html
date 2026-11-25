@@ -166,6 +166,19 @@
       .kana-char { font-size: clamp(120px, 40vw, 190px); font-weight: 900; line-height: 1; }
       .is-off { opacity: .45; }
 
+      /* ---- single-cell stage ----
+         Used when 位置 is NOT among the compared types: the grid is
+         not shown at all; one large cell sits in the centre and the
+         figure appears inside it, so the position never changes.
+         Same look as one board cell, just much bigger. */
+      .single-stage {
+        width: 100%; max-width: 400px; margin: 0 auto; aspect-ratio: 1 / 1;
+        background: var(--cell); border: 2px solid var(--cell-line); border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .single-stage.active { background: var(--cell-active); border-color: var(--accent); }
+      .single-stage svg { width: 72%; height: 72%; display: block; }
+
       .progress-track { height: 6px; background: var(--surface-2); border-radius: 3px; margin: 16px 0 4px; overflow: hidden; }
       .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; transition: width .2s linear; }
 
@@ -367,6 +380,7 @@
         .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
         .board { max-width: 480px; }
         .kana-stage { max-width: 480px; }
+        .single-stage { max-width: 480px; }
         .acc-grid { grid-template-columns: repeat(2, 1fr); }
       }
       /* ---- PC ---- */
@@ -375,6 +389,7 @@
         .layout { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
         .board { max-width: 520px; }
         .kana-stage { max-width: 520px; }
+        .single-stage { max-width: 520px; }
         .ans-btn { min-height: 88px; }
         .ans-btn .ans-name { font-size: 24px; }
       }
@@ -447,6 +462,8 @@
           <div class="kana-stage" id="kanaStage" hidden aria-label="ひらがなの表示">
             <span class="kana-char" id="kanaChar"></span>
           </div>
+
+          <div class="single-stage" id="singleStage" hidden aria-label="図形の表示（真ん中の1マス）"></div>
 
           <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
 
@@ -682,7 +699,7 @@
 
           <section class="panel howto" aria-label="遊び方">
             <h2 style="color:var(--ink)">遊び方</h2>
-            <p>盤面に図形が1つずつ表示されます。<b>n個前</b>の図形と比べて、設定で選んだ種類が同じなら、そのボタンを押してください。たとえば位置だけを選べば位置だけ、色と形を選べばその2つだけを比べます。複数の条件が同時に当てはまることもあります。</p>
+            <p>盤面に図形が1つずつ表示されます。<b>n個前</b>の図形と比べて、設定で選んだ種類が同じなら、そのボタンを押してください。たとえば位置だけを選べば位置だけ、色と形を選べばその2つだけを比べます。複数の条件が同時に当てはまることもあります。変わるのは選んだ種類だけです。位置を選んでいないときは盤面ではなく真ん中に1マスだけが大きく表示され、位置は固定です。色を選んでいないときは色は「あお」に、形を選んでいないときは形は「まる」に固定されます。</p>
             <p>最初のn回は比べる相手がないので、採点されません。パソコンではキーボードの <b>A（位置）・S（色）・D（形）・F（音声）</b> でも答えられます（選んだ種類だけ有効です）。</p>
             <p>色は あか・きいろ・みどり・みずいろ・あお・むらさき の6色、形は まる・しかく・さんかく・ひしがた・ほし・ろっかく の6種類です。盤面の大きさは設定で 2×2・3×3・4×4・5×5 から選べます。</p>
             <p>設定で<b>音声</b>を選ぶと、図形が表示されるのと同時に、五十音の音が1つ読み上げられます。n個前と同じ音が聞こえたら<b>「音声」ボタン（Fキー）</b>を押してください。音が出るので、音量に気をつけてください。</p>
@@ -918,6 +935,7 @@
         var btnKanaMode = document.getElementById("btnKanaMode");
         var kanaStage = document.getElementById("kanaStage");
         var kanaChar = document.getElementById("kanaChar");
+        var singleStage = document.getElementById("singleStage");
         function applyModsUI() {
           var active = activeModKeys();
           modToggleBtns.forEach(function (b) {
@@ -947,7 +965,13 @@
           });
           var shown = kanaMode ? 1 : Math.max(1, active.length);
           if (answersRow) answersRow.style.gridTemplateColumns = "repeat(" + shown + ", minmax(0, 1fr))";
-          if (boardEl) boardEl.hidden = kanaMode;
+          /* Display area follows the compared types: ひらがなモード
+             shows the kana stage; when 位置 is not compared the grid
+             is hidden and one large centre cell is shown instead
+             (position fixed); otherwise the grid is shown. */
+          var useSingle = !kanaMode && !currentMods.pos;
+          if (boardEl) boardEl.hidden = kanaMode || useSingle;
+          if (singleStage) singleStage.hidden = !useSingle;
           if (kanaStage) kanaStage.hidden = !kanaMode;
           if (headerSub) {
             if (kanaMode) headerSub.textContent = "ひらがなだけを覚える、nバックです。";
@@ -1308,6 +1332,7 @@
         }
         function clearBoard() {
           cells.forEach(function (c) { c.classList.remove("active"); c.innerHTML = ""; });
+          if (singleStage) { singleStage.classList.remove("active"); singleStage.innerHTML = ""; }
           if (kanaChar) kanaChar.textContent = "";
         }
 
@@ -1409,9 +1434,23 @@
           if (gameMods(g).indexOf("kana") >= 0) {
             kanaChar.textContent = KANA[g.seqs.kana.seq[i]];
           } else {
-            var pos = g.seqs.pos.seq[i];
-            cells[pos].classList.add("active");
-            cells[pos].innerHTML = shapeSVG(g.seqs.shp.seq[i], g.seqs.col.seq[i]);
+            /* Only the compared types may vary. A type that is not
+               compared stays fixed the whole game: 形 is まる
+               (index 0) and 色 is あお (index 4), so e.g. a colour-only
+               game changes nothing but the colour. */
+            var modsNow = gameMods(g);
+            var shpIdx = modsNow.indexOf("shp") >= 0 ? g.seqs.shp.seq[i] : 0;
+            var colIdx = modsNow.indexOf("col") >= 0 ? g.seqs.col.seq[i] : 4;
+            if (g.single) {
+              /* No 位置 in this game: one large centre cell, position
+                 never changes. */
+              singleStage.classList.add("active");
+              singleStage.innerHTML = shapeSVG(shpIdx, colIdx);
+            } else {
+              var pos = g.seqs.pos.seq[i];
+              cells[pos].classList.add("active");
+              cells[pos].innerHTML = shapeSVG(shpIdx, colIdx);
+            }
           }
           if (gameMods(g).indexOf("voice") >= 0) {
             speakVoice(g.seqs.voice.seq[i]);
@@ -1483,6 +1522,9 @@
           }
           game = {
             n: currentN, mixed: mixN, backs: backs, grid: currentGrid, mods: active.slice(), total: total, showMs: showMs, gapMs: gapMs,
+            /* single: 位置 is not compared, so the stimulus is drawn
+               in the one large centre cell instead of the grid. */
+            single: active.indexOf("pos") < 0,
             idx: 0, pressed: { pos: false, col: false, shp: false, voice: false, kana: false },
             stats: newStats(),
             seqs: {
