@@ -293,6 +293,58 @@
         border: 1.5px solid var(--line); border-radius: 8px;
       }
       .h-del.confirm { background: var(--warn); border-color: var(--warn); color: #fff; }
+      /* History rows stay short (date/time + accuracy only); the
+         per-game detail lives behind this icon button. 44px+ target
+         so it is easy to tap with a finger. */
+      .h-detail-btn {
+        min-width: 44px; min-height: 44px; padding: 8px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: var(--surface); color: var(--accent);
+        border: 1.5px solid var(--line); border-radius: 8px;
+        touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      }
+      .h-detail-btn svg { width: 22px; height: 22px; display: block; }
+      .h-detail-btn:active { background: var(--surface-2); }
+      .history-summary {
+        margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line);
+        font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;
+      }
+      .history-summary b { font-size: 17px; font-weight: 900; }
+      /* ---- per-game detail panel (modal over the page) ---- */
+      .detail-overlay {
+        position: fixed; inset: 0; z-index: 1100;
+        background: rgba(10, 18, 16, .55);
+        display: flex; align-items: flex-end; justify-content: center;
+      }
+      .detail-card {
+        background: var(--surface); color: var(--ink);
+        width: 100%; max-width: 520px; max-height: 88vh; overflow-y: auto;
+        border-radius: 14px 14px 0 0; padding: 20px 18px 24px;
+        box-shadow: 0 10px 40px rgba(0,0,0,.3);
+      }
+      @media (min-width: 600px) {
+        .detail-overlay { align-items: center; padding: 20px; }
+        .detail-card { border-radius: 14px; }
+      }
+      .detail-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+      .detail-head h3 { margin: 0; font-size: 18px; font-weight: 900; }
+      .btn-close-detail {
+        min-width: 44px; min-height: 44px; padding: 6px; border-radius: 8px;
+        border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+        font-size: 17px; font-weight: 900; line-height: 1;
+        touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      }
+      .detail-meta { color: var(--ink-soft); font-size: 14px; margin: 0 0 12px; }
+      .detail-overall {
+        background: var(--accent); color: var(--accent-ink);
+        border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;
+        display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      }
+      .detail-overall .do-name { font-size: 14px; font-weight: 700; opacity: .9; }
+      .detail-overall .do-num { font-size: 36px; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+      .detail-overall .do-num .pct { font-size: 18px; }
+      .detail-actions { margin-top: 18px; display: grid; gap: 10px; }
+      .detail-actions .btn-start { margin-top: 0; }
       .empty-note { color: var(--ink-soft); font-size: 14px; margin: 0; }
       .storage-note { color: var(--ink-soft); font-size: 13px; margin: 0 0 12px; }
       .record-actions { margin-top: 14px; }
@@ -622,6 +674,7 @@
             </div>
             <p class="empty-note" id="historyEmpty">まだ記録がありません。1回遊ぶと、ここに通算の正解率と履歴が出ます。</p>
             <ul class="history-list" id="historyList"></ul>
+            <p class="history-summary" id="historySummary" hidden></p>
             <div class="record-actions" id="recordActions" hidden>
               <button type="button" class="btn-clear" id="btnClearAll">記録をすべて消す</button>
             </div>
@@ -643,6 +696,25 @@
         <p class="desc-sub" id="headerSub">位置・色・形の3つを同時に覚える、トリプルnバックです。</p>
         <p class="desc-intro">このページは、ワーキングメモリ（作業記憶）を鍛える脳トレ『nバック（Nバック）』のトレーニングです。位置・色・形・音声の中から比べる種類を選び、n個前と同じかどうかを答えます。デュアルnバックの次の段階であるトリプルnバックに、無料・登録不要で挑戦できます。</p>
       </section>
+    </div>
+
+    <div class="detail-overlay" id="detailModal" hidden>
+      <div class="detail-card" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="detail-head">
+          <h3 id="detailTitle">記録の詳細</h3>
+          <button type="button" class="btn-close-detail" id="btnDetailClose" aria-label="詳細を閉じる">✕</button>
+        </div>
+        <p class="detail-meta" id="detailMeta"></p>
+        <div class="detail-overall">
+          <span class="do-name">全体の正解率</span>
+          <span class="do-num"><span id="detailAcc">–</span><span class="pct">%</span></span>
+        </div>
+        <div class="detail-list" id="detailRows"></div>
+        <div class="detail-actions">
+          <button type="button" class="btn-clear" id="btnDetailDelete">この記録を消す</button>
+          <button type="button" class="btn-start" id="btnDetailBack">一覧に戻る</button>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -1508,7 +1580,12 @@
           statusSub.textContent = "";
           progressFill.style.width = "100%";
 
-          sessionGames.push({ n: finished.n, mixed: !!finished.mixed, grid: finished.grid, mods: gameMods(finished), total: finished.total, stats: finished.stats, at: new Date() });
+          /* showMs/gapMs ride along in memory only, so this session's
+             games can show their exact planned duration. saveStore()
+             writes a fixed field set, so they are never persisted and
+             the saved format does not change; restored games fall
+             back to the saved settings' timing (see gameDurationMs). */
+          sessionGames.push({ n: finished.n, mixed: !!finished.mixed, grid: finished.grid, mods: gameMods(finished), total: finished.total, stats: finished.stats, at: new Date(), showMs: finished.showMs, gapMs: finished.gapMs });
           saveStore();
           renderResults(finished.stats, gameMods(finished));
           showCornerResult(finished.stats, gameMods(finished));
@@ -1556,6 +1633,11 @@
           });
           document.getElementById("historyEmpty").hidden = sessionGames.length > 0;
           document.getElementById("recordActions").hidden = sessionGames.length === 0;
+          /* History rows stay short on purpose: date/time played and
+             the accuracy only. Everything else about a game (per-type
+             breakdown, settings) lives in the detail panel opened by
+             the magnifier button, so a long history no longer eats
+             the page. */
           var list = document.getElementById("historyList");
           list.innerHTML = "";
           sessionGames.slice().reverse().forEach(function (g, revIdx) {
@@ -1567,40 +1649,128 @@
             var dd = g.at.getDate();
             var hh = ("0" + g.at.getHours()).slice(-2);
             var mm = ("0" + g.at.getMinutes()).slice(-2);
-            var gGrid = (g.grid === 2 || g.grid === 3 || g.grid === 4 || g.grid === 5) ? g.grid : 4;
-            var gMods = gameMods(g);
-            var nDesc = g.mixed ? ("n混在（1〜" + g.n + "）") : ("n=" + g.n);
-            var desc = (realIdx + 1) + "回目： " + nDesc + "、" + modNames(gMods);
-            if (gMods.indexOf("kana") < 0) desc += "、盤面" + gGrid + "×" + gGrid;
-            desc += "、" + g.total + "回表示";
-            left.innerHTML = '<span class="h-when">' + mo + "/" + dd + " " + hh + ":" + mm + "</span>　" + desc;
+            left.innerHTML = '<span class="h-when">' + mo + "月" + dd + "日 " + hh + ":" + mm + '</span>　正解率 <b>' + fmt(overallAccForGame(g)) + "%</b>";
             var right = document.createElement("span");
             right.className = "h-right";
-            var acc = document.createElement("span");
-            acc.innerHTML = "全体 <b>" + fmt(overallAccForGame(g)) + "%</b>";
-            var del = document.createElement("button");
-            del.type = "button";
-            del.className = "h-del";
-            del.textContent = "消す";
-            del.setAttribute("aria-label", (realIdx + 1) + "回目の記録を消す");
-            del.addEventListener("click", function () {
-              if (!del.classList.contains("confirm")) {
-                del.classList.add("confirm");
-                del.textContent = "本当に消す";
-                setTimeout(function () {
-                  del.classList.remove("confirm");
-                  del.textContent = "消す";
-                }, 3000);
-                return;
-              }
-              sessionGames.splice(realIdx, 1);
-              saveStore();
-              renderRecord();
-            });
-            right.appendChild(acc);
-            right.appendChild(del);
+            var det = document.createElement("button");
+            det.type = "button";
+            det.className = "h-detail-btn";
+            det.setAttribute("aria-label", (realIdx + 1) + "回目の詳細を見る");
+            det.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+            det.addEventListener("click", function () { openDetail(realIdx); });
+            right.appendChild(det);
             li.appendChild(left); li.appendChild(right);
             list.appendChild(li);
+          });
+          /* Totals under the list: how many games in all, and the
+             summed time they took. */
+          var sumEl = document.getElementById("historySummary");
+          if (sumEl) {
+            if (sessionGames.length) {
+              var totalMs = 0;
+              sessionGames.forEach(function (g) { totalMs += gameDurationMs(g); });
+              sumEl.innerHTML = "合計時間 約<b>" + fmtDuration(totalMs) + "</b>　・　合計回数 <b>" + sessionGames.length + "</b>回";
+              sumEl.hidden = false;
+            } else {
+              sumEl.hidden = true;
+            }
+          }
+        }
+
+        /* ---------- per-game duration & detail panel ---------- */
+        /* A game's planned duration, using the same formula as the
+           start button's estimate: 0.9s lead-in + trials x (show +
+           gap). Games finished in this session carry their own
+           showMs/gapMs; restored games use the saved settings'
+           current timing, so the figure is an estimate there. */
+        function gameDurationMs(g) {
+          var show = (typeof g.showMs === "number") ? g.showMs : (parseInt(sliders.show.value, 10) || 2500);
+          var gap = (typeof g.gapMs === "number") ? g.gapMs : (parseInt(sliders.gap.value, 10) || 500);
+          return 900 + (g.total || 0) * (show + gap);
+        }
+        function fmtDuration(ms) {
+          var sec = Math.round(ms / 1000);
+          if (sec >= 3600) {
+            var h = Math.floor(sec / 3600);
+            var m = Math.round((sec % 3600) / 60);
+            if (m === 60) { h += 1; m = 0; }
+            return h + "時間" + (m ? m + "分" : "");
+          }
+          if (sec >= 60) {
+            var mm2 = Math.floor(sec / 60);
+            var ss = sec % 60;
+            return mm2 + "分" + (ss ? ss + "秒" : "");
+          }
+          return sec + "秒";
+        }
+
+        var detailModal = document.getElementById("detailModal");
+        var btnDetailDelete = document.getElementById("btnDetailDelete");
+        var detailIdx = -1;
+        function resetDetailDelete() {
+          if (!btnDetailDelete) return;
+          btnDetailDelete.classList.remove("confirm");
+          btnDetailDelete.textContent = "この記録を消す";
+        }
+        function openDetail(idx) {
+          var g = sessionGames[idx];
+          if (!g || !detailModal) return;
+          detailIdx = idx;
+          var gMods = gameMods(g);
+          var mo = g.at.getMonth() + 1;
+          var dd = g.at.getDate();
+          var hh = ("0" + g.at.getHours()).slice(-2);
+          var mm = ("0" + g.at.getMinutes()).slice(-2);
+          document.getElementById("detailTitle").textContent = (idx + 1) + "回目の詳細";
+          var nDesc = g.mixed ? ("n混在（1〜" + g.n + "）") : ("n = " + g.n);
+          var meta = mo + "月" + dd + "日 " + hh + ":" + mm + " ／ " + nDesc + " ／ " + modNames(gMods);
+          var gGrid = (g.grid === 2 || g.grid === 3 || g.grid === 4 || g.grid === 5) ? g.grid : 4;
+          if (gMods.indexOf("kana") < 0) meta += " ／ 盤面" + gGrid + "×" + gGrid;
+          meta += " ／ " + g.total + "回表示 ／ 所要時間 約" + fmtDuration(gameDurationMs(g));
+          document.getElementById("detailMeta").textContent = meta;
+          document.getElementById("detailAcc").textContent = fmt(overallAccForGame(g));
+          var rows = document.getElementById("detailRows");
+          rows.innerHTML = "";
+          MODS.forEach(function (m) {
+            if (gMods.indexOf(m.key) < 0) return;
+            var st = g.stats[m.key];
+            if (!st) return;
+            var row = document.createElement("div");
+            row.className = "detail-row";
+            row.innerHTML = '<span class="d-name"></span><span class="d-nums"></span>';
+            row.querySelector(".d-name").textContent = m.name + "（正解率 " + fmt(accOf(st)) + "%）";
+            row.querySelector(".d-nums").innerHTML =
+              "正解 <b>" + st.hit + "</b>　見逃し <b>" + st.miss + "</b>　押し間違い <b>" + st.fa + "</b>";
+            rows.appendChild(row);
+          });
+          resetDetailDelete();
+          detailModal.hidden = false;
+        }
+        function closeDetail() {
+          if (detailModal) detailModal.hidden = true;
+          detailIdx = -1;
+        }
+        if (detailModal) {
+          document.getElementById("btnDetailClose").addEventListener("click", closeDetail);
+          document.getElementById("btnDetailBack").addEventListener("click", closeDetail);
+          detailModal.addEventListener("click", function (e) {
+            if (e.target === detailModal) closeDetail();
+          });
+          document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && !detailModal.hidden) closeDetail();
+          });
+          btnDetailDelete.addEventListener("click", function () {
+            if (detailIdx < 0 || !sessionGames[detailIdx]) { closeDetail(); return; }
+            if (!btnDetailDelete.classList.contains("confirm")) {
+              btnDetailDelete.classList.add("confirm");
+              btnDetailDelete.textContent = "本当に消しますか？";
+              setTimeout(resetDetailDelete, 3000);
+              return;
+            }
+            sessionGames.splice(detailIdx, 1);
+            saveStore();
+            closeDetail();
+            renderRecord();
           });
         }
 
