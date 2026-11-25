@@ -78,6 +78,12 @@
       header.top p { margin: 0; color: var(--ink-soft); font-size: 15px; }
       header.top .intro { margin: 10px 0 0; font-size: 13.5px; line-height: 1.7; }
 
+      /* ---- description block (bottom of the page, below board,
+         answer buttons and the start button) ---- */
+      .desc-block { margin-top: 20px; }
+      .desc-block .desc-sub { margin: 0 0 6px; color: var(--ink-soft); font-size: 15px; font-weight: 700; }
+      .desc-block .desc-intro { margin: 0; color: var(--ink-soft); font-size: 13.5px; line-height: 1.7; }
+
       .layout { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
       /* Grid items must be allowed to shrink below their content's
          min-content size; otherwise wide content inside a panel (the
@@ -204,7 +210,7 @@
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
       }
-      .col-side > .btn-start { box-shadow: var(--shadow); }
+      .panel .btn-start { margin-top: 16px; }
       [hidden] { display: none !important; }
 
       /* ---- settings ---- */
@@ -372,8 +378,6 @@
     <div class="wrap">
       <header class="top">
         <h1>nバックトレーニング</h1>
-        <p id="headerSub">位置・色・形の3つを同時に覚える、トリプルnバックです。</p>
-        <p class="intro">このページは、ワーキングメモリ（作業記憶）を鍛える脳トレ『nバック（Nバック）』のトレーニングです。位置・色・形・音声の中から比べる種類を選び、n個前と同じかどうかを答えます。デュアルnバックの次の段階であるトリプルnバックに、無料・登録不要で挑戦できます。</p>
       </header>
 
       <div class="layout">
@@ -412,12 +416,13 @@
             </button>
           </div>
 
+          <button type="button" class="btn-start" id="btnStart">2バックを開始（約37秒）</button>
+
           <button type="button" class="btn-stop" id="btnStop" hidden>やめる</button>
         </section>
 
         <!-- side column -->
         <div class="col-side">
-          <button type="button" class="btn-start" id="btnStart">2バックを開始（約37秒）</button>
           <section class="panel" aria-label="設定">
             <button type="button" class="settings-toggle" id="btnSettings" aria-expanded="false" aria-controls="settingsBody">
               <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -633,6 +638,11 @@
           </section>
         </div>
       </div>
+
+      <section class="desc-block" aria-label="このページについて">
+        <p class="desc-sub" id="headerSub">位置・色・形の3つを同時に覚える、トリプルnバックです。</p>
+        <p class="desc-intro">このページは、ワーキングメモリ（作業記憶）を鍛える脳トレ『nバック（Nバック）』のトレーニングです。位置・色・形・音声の中から比べる種類を選び、n個前と同じかどうかを答えます。デュアルnバックの次の段階であるトリプルnバックに、無料・登録不要で挑戦できます。</p>
+      </section>
     </div>
 
     <script>
