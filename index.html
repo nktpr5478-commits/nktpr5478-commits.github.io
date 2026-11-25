@@ -320,6 +320,44 @@
         .ans-btn { min-height: 88px; }
         .ans-btn .ans-name { font-size: 24px; }
       }
+      /* ---- corner result (fixed, shown only after a game finishes) ---- */
+      .corner-result {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        right: 10px;
+        z-index: 1000;
+        background: var(--accent);
+        color: var(--accent-ink);
+        border-radius: 10px;
+        padding: 10px 14px 9px;
+        box-shadow: 0 4px 18px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.18);
+        text-align: center;
+        min-width: 124px;
+        line-height: 1.25;
+        pointer-events: none;
+      }
+      .corner-result-main {
+        font-weight: 900;
+        white-space: nowrap;
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 6px;
+      }
+      .corner-result-label { font-size: 15px; font-weight: 900; letter-spacing: .02em; }
+      .corner-result-pct {
+        font-size: 30px;
+        font-weight: 900;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .corner-result-sub {
+        font-size: 13px;
+        font-weight: 700;
+        opacity: .92;
+        margin-top: 4px;
+        font-variant-numeric: tabular-nums;
+      }
       @media (prefers-reduced-motion: reduce) {
         .progress-fill { transition: none; }
         .ans-btn { transition: none; }
@@ -327,6 +365,10 @@
     </style>
   </head>
   <body>
+    <div class="corner-result" id="cornerResult" hidden role="status" aria-live="polite" aria-label="今回の正解率">
+      <div class="corner-result-main"><span class="corner-result-label">正解率</span><span class="corner-result-pct" id="cornerAcc">–%</span></div>
+      <div class="corner-result-sub" id="cornerHits">的中 0回</div>
+    </div>
     <div class="wrap">
       <header class="top">
         <h1>nバックトレーニング</h1>
@@ -745,6 +787,24 @@
         buildBoard(currentGrid);
         var statusMain = document.getElementById("statusMain");
         var statusSub = document.getElementById("statusSub");
+        var cornerResult = document.getElementById("cornerResult");
+        var cornerAcc = document.getElementById("cornerAcc");
+        var cornerHits = document.getElementById("cornerHits");
+        function hideCornerResult() {
+          if (cornerResult) cornerResult.hidden = true;
+        }
+        function showCornerResult(stats, modsForGame) {
+          if (!cornerResult || !stats) return;
+          var keys = modsForGame && modsForGame.length ? modsForGame : activeModKeys();
+          var acc = overallAcc(stats, keys);
+          var hits = 0;
+          keys.forEach(function (k) {
+            if (stats[k]) hits += (stats[k].hit || 0);
+          });
+          if (cornerAcc) cornerAcc.textContent = (acc === null ? "–" : String(acc)) + "%";
+          if (cornerHits) cornerHits.textContent = "的中 " + hits + "回";
+          cornerResult.hidden = false;
+        }
         var nBadge = document.getElementById("nBadge");
         var nBadgeNum = document.getElementById("nBadgeNum");
         var progressFill = document.getElementById("progressFill");
@@ -1347,6 +1407,7 @@
             }
           };
           playing = true;
+          hideCornerResult();
           document.getElementById("resultPanel").hidden = true;
           fieldset.disabled = true;
           btnSettings.disabled = true;
@@ -1377,6 +1438,7 @@
 
         function stopGame() {
           endPlay();
+          hideCornerResult();
           statusMain.textContent = "途中でやめました";
           statusSub.textContent = "";
           progressFill.style.width = "0%";
@@ -1434,6 +1496,7 @@
           sessionGames.push({ n: finished.n, mixed: !!finished.mixed, grid: finished.grid, mods: gameMods(finished), total: finished.total, stats: finished.stats, at: new Date() });
           saveStore();
           renderResults(finished.stats, gameMods(finished));
+          showCornerResult(finished.stats, gameMods(finished));
           renderRecord();
         }
 
