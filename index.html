@@ -1253,18 +1253,23 @@
         function press(key) {
           if (!playing || !game || game.idx < 0 || game.idx >= game.total) return;
           if (gameMods(game).indexOf(key) < 0) return;
-          if (game.pressed[key]) return;
+          /* Repeated presses within the same trial are accepted:
+             the answer stays registered (game.pressed is a boolean,
+             so scoring still counts this trial once for this type —
+             pressing again never cancels it), and every press
+             re-triggers the flash feedback below. */
           game.pressed[key] = true;
           ansBtns[key].classList.add("pressed");
-          /* Flash only: remove the highlight after ~100ms so the
+          /* Flash only: remove the highlight after ~50ms so the
              button returns to its normal look right away. Scoring
              uses game.pressed above, so the display timing never
-             affects judgement. */
+             affects judgement. Each new press restarts the timer,
+             so the button lights up again on every press. */
           if (pressedTimers[key]) { clearTimeout(pressedTimers[key]); delete pressedTimers[key]; }
           pressedTimers[key] = setTimeout(function () {
             ansBtns[key].classList.remove("pressed");
             delete pressedTimers[key];
-          }, 100);
+          }, 50);
         }
         MODS.forEach(function (m) {
           /* Register on pointerdown (the moment the finger touches),
@@ -1275,10 +1280,10 @@
              touch, immediately, for each button independently, so a
              simultaneous position + colour press records both.
              The click listener stays as a fallback for environments
-             without pointer events (and for synthetic clicks); the
-             guard at the top of press() makes the follow-up click a
-             no-op when pointerdown already recorded the press, so a
-             press is never counted twice and never toggled off. */
+             without pointer events (and for synthetic clicks). A
+             follow-up click after pointerdown just re-triggers the
+             flash; game.pressed is a boolean, so a press is never
+             counted twice and never toggled off. */
           ansBtns[m.key].addEventListener("pointerdown", function (e) {
             if (e && e.preventDefault) e.preventDefault();
             press(m.key);
