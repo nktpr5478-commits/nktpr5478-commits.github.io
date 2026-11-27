@@ -1712,16 +1712,25 @@
             if (sessionGames.length) {
               var totalMs = 0;
               sessionGames.forEach(function (g) { totalMs += gameDurationMs(g); });
+              /* "Today" is the local calendar day: from today's
+                 00:00 up to (not including) tomorrow's 00:00.
+                 Comparing epoch ms (not the date fields) keeps a
+                 record with a broken timestamp out of the count
+                 instead of ever letting it throw or slip in. The
+                 number of today's games is shown next to the hit
+                 count, so the figure can be checked against the
+                 dated rows in the history list above. */
               var now = new Date();
+              var dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+              var dayEnd = dayStart + 24 * 60 * 60 * 1000;
               var todayGames = sessionGames.filter(function (g) {
-                return g.at.getFullYear() === now.getFullYear()
-                  && g.at.getMonth() === now.getMonth()
-                  && g.at.getDate() === now.getDate();
+                var t = (g.at && typeof g.at.getTime === "function") ? g.at.getTime() : NaN;
+                return t >= dayStart && t < dayEnd;
               });
               var todayHits = 0;
               var todayStats = combinedStats(todayGames);
               MODS.forEach(function (m) { todayHits += (todayStats[m.key].hit || 0); });
-              sumEl.innerHTML = "合計時間 約<b>" + fmtDuration(totalMs) + "</b>　・　合計回数 <b>" + sessionGames.length + "</b>回　・　今日の正解回数 <b>" + todayHits + "</b>回";
+              sumEl.innerHTML = "合計時間 約<b>" + fmtDuration(totalMs) + "</b>　・　合計回数 <b>" + sessionGames.length + "</b>回　・　今日の正解回数 <b>" + todayHits + "</b>回（今日" + todayGames.length + "回分）";
               sumEl.hidden = false;
             } else {
               sumEl.hidden = true;
