@@ -1704,14 +1704,18 @@
             li.appendChild(left); li.appendChild(right);
             list.appendChild(li);
           });
-          /* Totals under the list: how many games in all, and the
-             summed time they took. */
+          /* Totals under the list: how many games in all, the
+             summed time they took, and the total number of correct
+             answers (hits) across all games and types. */
           var sumEl = document.getElementById("historySummary");
           if (sumEl) {
             if (sessionGames.length) {
               var totalMs = 0;
               sessionGames.forEach(function (g) { totalMs += gameDurationMs(g); });
-              sumEl.innerHTML = "合計時間 約<b>" + fmtDuration(totalMs) + "</b>　・　合計回数 <b>" + sessionGames.length + "</b>回";
+              var totalHits = 0;
+              var allStats = combinedStats(sessionGames);
+              MODS.forEach(function (m) { totalHits += (allStats[m.key].hit || 0); });
+              sumEl.innerHTML = "合計時間 約<b>" + fmtDuration(totalMs) + "</b>　・　合計回数 <b>" + sessionGames.length + "</b>回　・　合計正解回数 <b>" + totalHits + "</b>回";
               sumEl.hidden = false;
             } else {
               sumEl.hidden = true;
