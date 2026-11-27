@@ -1705,17 +1705,23 @@
             list.appendChild(li);
           });
           /* Totals under the list: how many games in all, the
-             summed time they took, and the total number of correct
-             answers (hits) across all games and types. */
+             summed time they took, and today's number of correct
+             answers (hits) — today's games only, all types. */
           var sumEl = document.getElementById("historySummary");
           if (sumEl) {
             if (sessionGames.length) {
               var totalMs = 0;
               sessionGames.forEach(function (g) { totalMs += gameDurationMs(g); });
-              var totalHits = 0;
-              var allStats = combinedStats(sessionGames);
-              MODS.forEach(function (m) { totalHits += (allStats[m.key].hit || 0); });
-              sumEl.innerHTML = "合計時間 約<b>" + fmtDuration(totalMs) + "</b>　・　合計回数 <b>" + sessionGames.length + "</b>回　・　合計正解回数 <b>" + totalHits + "</b>回";
+              var now = new Date();
+              var todayGames = sessionGames.filter(function (g) {
+                return g.at.getFullYear() === now.getFullYear()
+                  && g.at.getMonth() === now.getMonth()
+                  && g.at.getDate() === now.getDate();
+              });
+              var todayHits = 0;
+              var todayStats = combinedStats(todayGames);
+              MODS.forEach(function (m) { todayHits += (todayStats[m.key].hit || 0); });
+              sumEl.innerHTML = "合計時間 約<b>" + fmtDuration(totalMs) + "</b>　・　合計回数 <b>" + sessionGames.length + "</b>回　・　今日の正解回数 <b>" + todayHits + "</b>回";
               sumEl.hidden = false;
             } else {
               sumEl.hidden = true;
